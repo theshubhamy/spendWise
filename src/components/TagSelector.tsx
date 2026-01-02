@@ -1,9 +1,9 @@
 /**
- * Tag Selector Component - Multi-select tags
+ * Tag Selector Component - Modern redesigned multi-select tags
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { TagChip } from './TagChip';
 import { useTagStore } from '@/store/tagStore';
 import { Tag } from '@/types';
@@ -45,17 +45,32 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={[styles.label, { color: colors.text }]}>{label}</Text>}
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      )}
 
       {selectedTags.length > 0 && (
-        <View style={[styles.selectedContainer, { backgroundColor: colors.borderLight }]}>
-          <Text style={[styles.selectedLabel, { color: colors.textSecondary }]}>Selected:</Text>
+        <View
+          style={[
+            styles.selectedContainer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[styles.selectedLabel, { color: colors.textSecondary }]}
+          >
+            Selected ({selectedTags.length})
+          </Text>
           <View style={styles.selectedTags}>
             {selectedTags.map((tag) => (
               <TagChip
                 key={tag.id}
                 tag={tag}
                 size="small"
+                selected={true}
                 onPress={() => toggleTag(tag)}
               />
             ))}
@@ -63,61 +78,83 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         </View>
       )}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.scrollView}
-        contentContainerStyle={styles.tagsContainer}
-      >
-        {tags.map((tag) => {
-          const isSelected = selectedTagIds.includes(tag.id);
-          return (
-            <TouchableOpacity
-              key={tag.id}
-              onPress={() => toggleTag(tag)}
-              activeOpacity={0.7}
-            >
+      {tags.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No tags available. Create tags in the Tags screen.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.scrollView}
+          contentContainerStyle={styles.tagsContainer}
+          nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={tags.length > 3}
+        >
+          {tags.map((tag) => {
+            const isSelected = selectedTagIds.includes(tag.id);
+            return (
               <TagChip
+                key={tag.id}
                 tag={tag}
                 size="medium"
+                selected={isSelected}
                 onPress={() => toggleTag(tag)}
               />
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 12,
+    letterSpacing: 0.2,
   },
   selectedContainer: {
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 8,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   selectedLabel: {
     fontSize: 12,
-    marginBottom: 8,
+    fontWeight: '600',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   selectedTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   scrollView: {
-    maxHeight: 60,
+    maxHeight: 70,
   },
   tagsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 4,
+    paddingRight: 20,
+  },
+  emptyContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontStyle: 'italic',
   },
 });
 

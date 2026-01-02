@@ -1,6 +1,5 @@
 /**
- * Screen Template - Base template for app screens
- * Provides consistent layout, header, and styling
+ * Screen Template - Modern redesigned base template for app screens
  */
 
 import React, { ReactNode } from 'react';
@@ -25,6 +24,7 @@ interface ScreenTemplateProps {
   showStatusBar?: boolean;
   statusBarStyle?: 'light-content' | 'dark-content';
   backgroundColor?: string;
+  paddingHorizontal?: number;
 }
 
 export const ScreenTemplate: React.FC<ScreenTemplateProps> = ({
@@ -37,6 +37,7 @@ export const ScreenTemplate: React.FC<ScreenTemplateProps> = ({
   showStatusBar = true,
   statusBarStyle,
   backgroundColor,
+  paddingHorizontal = 20,
 }) => {
   const { colors, isDark } = useThemeContext();
   const insets = useSafeAreaInsets();
@@ -49,15 +50,25 @@ export const ScreenTemplate: React.FC<ScreenTemplateProps> = ({
       style={[styles.scrollView, { backgroundColor: bgColor }]}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingBottom: insets.bottom },
+        {
+          paddingBottom: insets.bottom + 20,
+          paddingHorizontal,
+        },
         contentContainerStyle,
       ]}
       showsVerticalScrollIndicator={false}
+      bounces={true}
     >
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.content, { backgroundColor: bgColor }, style]}>
+    <View
+      style={[
+        styles.content,
+        { backgroundColor: bgColor, paddingHorizontal },
+        style,
+      ]}
+    >
       {children}
     </View>
   );
@@ -78,7 +89,10 @@ export const ScreenTemplate: React.FC<ScreenTemplateProps> = ({
         <View
           style={[
             styles.header,
-            { backgroundColor: colors.surface, borderBottomColor: colors.border },
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            },
           ]}
         >
           {header}
@@ -92,7 +106,7 @@ export const ScreenTemplate: React.FC<ScreenTemplateProps> = ({
             {
               backgroundColor: colors.surface,
               borderTopColor: colors.border,
-              paddingBottom: insets.bottom,
+              paddingBottom: insets.bottom + 8,
             },
           ]}
         >
@@ -108,9 +122,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    borderBottomWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderBottomWidth: 0.5,
     zIndex: 10,
   },
   scrollView: {
@@ -118,18 +130,16 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
   },
   footer: {
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    borderTopWidth: 0.5,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
 });
 

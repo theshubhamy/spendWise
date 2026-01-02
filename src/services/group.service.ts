@@ -4,7 +4,7 @@
 
 import { getDatabase } from '@/database';
 import { QUERIES } from '@/database/queries';
-import { ExpenseGroup, GroupMember, ExpenseSplit } from '@/types';
+import { ExpenseGroup, GroupMember, ExpenseSplit, Payment } from '@/types';
 import { generateUUID } from '@/utils/uuid';
 
 /**
@@ -287,7 +287,10 @@ export const splitExpenseByAmount = async (
 };
 
 /**
- * Calculate balances for group members
+ * Calculate balances for group members (Splitwise-style)
+ * Balance = What you paid - What you owe
+ * Positive balance = You're owed money
+ * Negative balance = You owe money
  */
 export const calculateGroupBalances = async (groupId: string): Promise<Record<string, number>> => {
   const db = getDatabase();
@@ -302,16 +305,33 @@ export const calculateGroupBalances = async (groupId: string): Promise<Record<st
   // Get all expenses for the group
   const expenses = db.query(QUERIES.GET_EXPENSES_BY_GROUP, [groupId]);
 
-  // Calculate balances from splits
+  // Calculate balances: paid amount - owed amount
   for (let i = 0; i < (expenses.rows?.length || 0); i++) {
     const expense = expenses.rows?.[i];
     if (expense) {
+      const paidByMemberId = expense.paid_by_member_id as string | undefined;
+      const expenseAmount = expense.base_amount as number;
+
+      // Add to paid balance (whoever paid gets credit)
+      if (paidByMemberId && balances[paidByMemberId] !== undefined) {
+        balances[paidByMemberId] = (balances[paidByMemberId] || 0) + expenseAmount;
+      }
+
+      // Subtract from owed balance (what each person owes)
       const splits = await getExpenseSplits(expense.id as string);
       splits.forEach((split) => {
-        balances[split.memberId] = (balances[split.memberId] || 0) + split.amount;
+        balances[split.memberId] = (balances[split.memberId] || 0) - split.amount;
       });
     }
   }
+
+  // Subtract payments (settle up transactions)
+  const payments = await getPaymentsByGroup(groupId);
+  payments.forEach((payment) => {
+    // Payment reduces the debt: from pays to
+    balances[payment.fromMemberId] = (balances[payment.fromMemberId] || 0) - payment.amount;
+    balances[payment.toMemberId] = (balances[payment.toMemberId] || 0) + payment.amount;
+  });
 
   return balances;
 };
@@ -362,5 +382,82 @@ export const getSettlementSuggestions = async (
   }
 
   return suggestions;
+};
+
+/**
+ * Get payments for a group
+ */
+export const getPaymentsByGroup = async (groupId: string): Promise<Payment[]> => {
+  const db = getDatabase();
+  const result = db.query(QUERIES.GET_PAYMENTS_BY_GROUP, [groupId]);
+
+  const payments: Payment[] = [];
+  for (let i = 0; i < (result.rows?.length || 0); i++) {
+    const row = result.rows?.[i];
+    if (row) {
+      payments.push({
+        id: row.id as string,
+        groupId: row.group_id as string,
+        fromMemberId: row.from_member_id as string,
+        toMemberId: row.to_member_id as string,
+        amount: row.amount as number,
+        currencyCode: row.currency_code as string,
+        date: row.date as string,
+        notes: row.notes as string | undefined,
+        createdAt: row.created_at as string,
+      });
+    }
+  }
+
+  return payments;
+};
+
+/**
+ * Record a payment (settle up)
+ */
+export const recordPayment = async (
+  groupId: string,
+  fromMemberId: string,
+  toMemberId: string,
+  amount: number,
+  currencyCode: string,
+  date: string,
+  notes?: string,
+): Promise<Payment> => {
+  const db = getDatabase();
+  const id = generateUUID();
+  const now = new Date().toISOString();
+
+  db.execute(QUERIES.INSERT_PAYMENT, [
+    id,
+    groupId,
+    fromMemberId,
+    toMemberId,
+    amount,
+    currencyCode,
+    date,
+    notes || null,
+    now,
+  ]);
+
+  return {
+    id,
+    groupId,
+    fromMemberId,
+    toMemberId,
+    amount,
+    currencyCode,
+    date,
+    notes,
+    createdAt: now,
+  };
+};
+
+/**
+ * Delete a payment
+ */
+export const deletePayment = async (paymentId: string): Promise<void> => {
+  const db = getDatabase();
+  db.execute(QUERIES.DELETE_PAYMENT, [paymentId]);
 };
 

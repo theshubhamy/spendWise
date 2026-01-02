@@ -59,6 +59,7 @@ export const getExpenseById = async (id: string): Promise<Expense | null> => {
       notes: row.notes_encrypted ? await decrypt(row.notes_encrypted as string) : undefined,
       date: row.date as string,
       groupId: row.group_id as string | undefined,
+      paidByMemberId: row.paid_by_member_id as string | undefined,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
     };
@@ -92,6 +93,7 @@ export const createExpense = async (expense: Omit<Expense, 'id' | 'createdAt' | 
     notesEncrypted,
     expense.date,
     expense.groupId || null,
+    expense.paidByMemberId || null,
     now,
     now,
   ]);
@@ -140,6 +142,7 @@ export const updateExpense = async (id: string, updates: Partial<Omit<Expense, '
     notesEncrypted,
     updated.date,
     updated.groupId || null,
+    updated.paidByMemberId || null,
     updated.updatedAt,
     id,
   ]);

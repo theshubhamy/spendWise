@@ -11,8 +11,8 @@ export const QUERIES = {
   GET_EXPENSES_BY_CATEGORY: `SELECT * FROM ${TABLES.EXPENSES} WHERE category = ? ORDER BY date DESC`,
   GET_EXPENSES_BY_GROUP: `SELECT * FROM ${TABLES.EXPENSES} WHERE group_id = ? ORDER BY date DESC`,
   GET_EXPENSE_BY_ID: `SELECT * FROM ${TABLES.EXPENSES} WHERE id = ?`,
-  INSERT_EXPENSE: `INSERT INTO ${TABLES.EXPENSES} (id, amount, currency_code, base_amount, category, description, notes_encrypted, date, group_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  UPDATE_EXPENSE: `UPDATE ${TABLES.EXPENSES} SET amount = ?, currency_code = ?, base_amount = ?, category = ?, description = ?, notes_encrypted = ?, date = ?, group_id = ?, updated_at = ? WHERE id = ?`,
+  INSERT_EXPENSE: `INSERT INTO ${TABLES.EXPENSES} (id, amount, currency_code, base_amount, category, description, notes_encrypted, date, group_id, paid_by_member_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  UPDATE_EXPENSE: `UPDATE ${TABLES.EXPENSES} SET amount = ?, currency_code = ?, base_amount = ?, category = ?, description = ?, notes_encrypted = ?, date = ?, group_id = ?, paid_by_member_id = ?, updated_at = ? WHERE id = ?`,
   DELETE_EXPENSE: `DELETE FROM ${TABLES.EXPENSES} WHERE id = ?`,
 
   // Groups
@@ -33,6 +33,12 @@ export const QUERIES = {
   GET_SPLITS_BY_MEMBER: `SELECT * FROM ${TABLES.EXPENSE_SPLITS} WHERE member_id = ?`,
   INSERT_SPLIT: `INSERT INTO ${TABLES.EXPENSE_SPLITS} (id, expense_id, member_id, amount, percentage, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
   DELETE_SPLITS_BY_EXPENSE: `DELETE FROM ${TABLES.EXPENSE_SPLITS} WHERE expense_id = ?`,
+
+  // Payments
+  GET_PAYMENTS_BY_GROUP: `SELECT * FROM ${TABLES.PAYMENTS} WHERE group_id = ? ORDER BY date DESC, created_at DESC`,
+  GET_PAYMENT_BY_ID: `SELECT * FROM ${TABLES.PAYMENTS} WHERE id = ?`,
+  INSERT_PAYMENT: `INSERT INTO ${TABLES.PAYMENTS} (id, group_id, from_member_id, to_member_id, amount, currency_code, date, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  DELETE_PAYMENT: `DELETE FROM ${TABLES.PAYMENTS} WHERE id = ?`,
 
   // Tags
   GET_ALL_TAGS: `SELECT * FROM ${TABLES.TAGS} ORDER BY name ASC`,

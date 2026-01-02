@@ -1,18 +1,18 @@
 /**
- * Lock Screen - Biometric authentication screen
+ * Lock Screen - Modern redesigned biometric authentication screen
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authenticate, getBiometricType, isBiometricAvailable } from '@/services/biometric.service';
+import {
+  authenticate,
+  getBiometricType,
+  isBiometricAvailable,
+} from '@/services/biometric.service';
 import { useThemeContext } from '@/context/ThemeContext';
+import Icon from '@react-native-vector-icons/ionicons';
+import { Card, Button } from '@/components';
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -59,16 +59,16 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
     }
   };
 
-  const getBiometricIcon = (): string => {
+  const getBiometricIcon = (): 'person' | 'finger-print' | 'lock-closed' => {
     switch (biometricType) {
       case 'FaceID':
-        return '👤';
+        return 'person';
       case 'TouchID':
-        return '👆';
+        return 'finger-print';
       case 'Biometrics':
-        return '🔐';
+        return 'lock-closed';
       default:
-        return '🔒';
+        return 'lock-closed';
     }
   };
 
@@ -86,38 +86,59 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
-      <View style={styles.content}>
-        <Text style={styles.icon}>{getBiometricIcon()}</Text>
-        <Text style={[styles.title, { color: colors.text }]}>SpendWise is Locked</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.content, { paddingTop: insets.top + 60 }]}>
+        <Card variant="elevated" style={styles.iconContainer}>
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: colors.primary + '15' },
+            ]}
+          >
+            <Icon name={getBiometricIcon()} size={64} color={colors.primary} />
+          </View>
+        </Card>
+
+        <Text style={[styles.title, { color: colors.text }]}>
+          SpendWise is Locked
+        </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Use {getBiometricName()} to unlock
+          Use {getBiometricName()} to unlock your app
         </Text>
 
         {error && (
-          <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
-            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-          </View>
+          <Card variant="outlined" style={styles.errorContainer}>
+            <Icon name="alert-circle" size={20} color={colors.error} />
+            <Text style={[styles.errorText, { color: colors.error }]}>
+              {error}
+            </Text>
+          </Card>
         )}
 
-        <TouchableOpacity
-          style={[styles.unlockButton, { backgroundColor: colors.primary }]}
+        <Button
+          title={
+            isAuthenticating
+              ? 'Authenticating...'
+              : `Unlock with ${getBiometricName()}`
+          }
           onPress={handleAuthenticate}
+          loading={isAuthenticating}
           disabled={isAuthenticating}
-          activeOpacity={0.7}
-        >
-          {isAuthenticating ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={[styles.unlockButtonText, { color: '#ffffff' }]}>
-              Unlock with {getBiometricName()}
-            </Text>
-          )}
-        </TouchableOpacity>
+          style={styles.unlockButton}
+          size="large"
+          leftIcon={
+            !isAuthenticating ? (
+              <Icon name={getBiometricIcon()} size={24} color="#ffffff" />
+            ) : undefined
+          }
+        />
 
-        <Text style={[styles.footer, { color: colors.textTertiary }]}>
-          Your data is encrypted and secure
-        </Text>
+        <View style={styles.footer}>
+          <Icon name="shield-checkmark" size={16} color={colors.textTertiary} />
+          <Text style={[styles.footerText, { color: colors.textTertiary }]}>
+            Your data is encrypted and secure
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -131,52 +152,61 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    padding: 32,
+    paddingHorizontal: 32,
     width: '100%',
   },
-  icon: {
-    fontSize: 80,
-    marginBottom: 24,
+  iconContainer: {
+    marginBottom: 32,
+    padding: 0,
+    overflow: 'visible',
+  },
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 12,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 32,
+    marginBottom: 40,
     textAlign: 'center',
+    lineHeight: 22,
   },
   errorContainer: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 24,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 340,
+    gap: 12,
   },
   errorText: {
     fontSize: 14,
-    textAlign: 'center',
+    flex: 1,
+    fontWeight: '500',
   },
   unlockButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    minWidth: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  unlockButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    width: '100%',
+    maxWidth: 340,
+    marginBottom: 32,
   },
   footer: {
-    fontSize: 12,
-    textAlign: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 16,
   },
+  footerText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
 });
-

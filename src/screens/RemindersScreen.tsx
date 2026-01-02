@@ -11,9 +11,6 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '@/navigation/AppNavigator';
 import {
   getPendingReminders,
   scheduleReminder,
@@ -24,11 +21,8 @@ import { format } from 'date-fns';
 import { Input, Button, DatePicker } from '@/components';
 import { useThemeContext } from '@/context/ThemeContext';
 
-type RemindersScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 export const RemindersScreen: React.FC = () => {
   const { colors } = useThemeContext();
-  const navigation = useNavigation<RemindersScreenNavigationProp>();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -62,9 +56,9 @@ export const RemindersScreen: React.FC = () => {
 
     try {
       await scheduleReminder({
-        type: 'expense',
+        type: 'bill_due' as const,
         title: title.trim(),
-        message: message.trim() || undefined,
+        message: message.trim() || title.trim(),
         scheduledDate: scheduledDate,
       });
       setTitle('');
@@ -72,7 +66,7 @@ export const RemindersScreen: React.FC = () => {
       setScheduledDate(new Date().toISOString().split('T')[0]);
       setShowAddForm(false);
       await loadReminders();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to create reminder');
     }
   };
@@ -81,27 +75,40 @@ export const RemindersScreen: React.FC = () => {
     try {
       await completeReminder(id);
       await loadReminders();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to complete reminder');
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <Text style={[styles.title, { color: colors.text }]}>Reminders</Text>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowAddForm(!showAddForm)}
         >
-          <Text style={[styles.addButtonText, { color: '#ffffff' }]}>
+          <Text style={styles.addButtonText}>
             {showAddForm ? 'Cancel' : '+ Add'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {showAddForm && (
-        <View style={[styles.formContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View
+          style={[
+            styles.formContainer,
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
           <Input
             label="Title"
             value={title}
@@ -131,18 +138,22 @@ export const RemindersScreen: React.FC = () => {
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading reminders...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading reminders...
+          </Text>
         </View>
       ) : reminders.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No reminders</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No reminders
+          </Text>
           <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
             Create reminders to stay on top of your expenses
           </Text>
         </View>
       ) : (
         <ScrollView style={styles.list}>
-          {reminders.map((reminder) => (
+          {reminders.map(reminder => (
             <View
               key={reminder.id}
               style={[
@@ -154,19 +165,36 @@ export const RemindersScreen: React.FC = () => {
               ]}
             >
               <View style={styles.reminderInfo}>
-                <Text style={[styles.reminderTitle, { color: colors.text }]}>{reminder.title}</Text>
+                <Text style={[styles.reminderTitle, { color: colors.text }]}>
+                  {reminder.title}
+                </Text>
                 {reminder.message && (
-                  <Text style={[styles.reminderMessage, { color: colors.textSecondary }]}>{reminder.message}</Text>
+                  <Text
+                    style={[
+                      styles.reminderMessage,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {reminder.message}
+                  </Text>
                 )}
-                <Text style={[styles.reminderDate, { color: colors.textTertiary }]}>
-                  {format(new Date(reminder.scheduledDate), 'MMM dd, yyyy HH:mm')}
+                <Text
+                  style={[styles.reminderDate, { color: colors.textTertiary }]}
+                >
+                  {format(
+                    new Date(reminder.scheduledDate),
+                    'MMM dd, yyyy HH:mm',
+                  )}
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.completeButton, { backgroundColor: colors.success }]}
+                style={[
+                  styles.completeButton,
+                  { backgroundColor: colors.success },
+                ]}
                 onPress={() => handleComplete(reminder.id)}
               >
-                <Text style={[styles.completeButtonText, { color: '#ffffff' }]}>Done</Text>
+                <Text style={styles.completeButtonText}>Done</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -199,6 +227,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#ffffff',
   },
   formContainer: {
     padding: 16,
@@ -264,6 +293,6 @@ const styles = StyleSheet.create({
   completeButtonText: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#ffffff',
   },
 });
-

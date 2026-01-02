@@ -1,8 +1,8 @@
 /**
- * Expenses Screen - List all expenses
+ * Expenses Screen - Modern redesigned list of all expenses
  */
 
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,27 +10,34 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useExpenseStore } from '@/store';
+import { useGroupStore } from '@/store/groupStore';
 import { getTagsForExpense } from '@/services/tag.service';
-import { TagChip } from '@/components';
+import { TagChip, Card, ScreenHeader } from '@/components';
 import { format } from 'date-fns';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { undoLastAction } from '@/services/undo.service';
 import { useThemeContext } from '@/context/ThemeContext';
 import { Tag } from '@/types';
+import Icon from '@react-native-vector-icons/ionicons';
+import { UndoButton } from '@/components/UndoButton';
 
-type ExpensesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type ExpensesScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
 
 export const ExpensesScreen: React.FC = () => {
   const navigation = useNavigation<ExpensesScreenNavigationProp>();
-  const { expenses, isLoading, fetchExpenses, deleteExpense } = useExpenseStore();
+  const { expenses, isLoading, fetchExpenses, deleteExpense } =
+    useExpenseStore();
+  const { groups } = useGroupStore();
   const { colors } = useThemeContext();
   const [expenseTags, setExpenseTags] = useState<Record<string, Tag[]>>({});
   const [showUndo, setShowUndo] = useState(false);
-  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Load tags for all expenses
@@ -72,9 +79,15 @@ export const ExpensesScreen: React.FC = () => {
               if (undoTimeoutRef.current) {
                 clearTimeout(undoTimeoutRef.current);
               }
-              undoTimeoutRef.current = setTimeout(() => setShowUndo(false), 5000);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete expense. Please try again.');
+              undoTimeoutRef.current = setTimeout(
+                () => setShowUndo(false),
+                5000,
+              );
+            } catch {
+              Alert.alert(
+                'Error',
+                'Failed to delete expense. Please try again.',
+              );
             }
           },
         },
@@ -86,99 +99,168 @@ export const ExpensesScreen: React.FC = () => {
     fetchExpenses();
   }, [fetchExpenses]);
 
+  useEffect(() => {
+    // Load groups to show group names for split expenses
+    const { fetchGroups } = useGroupStore.getState();
+    fetchGroups();
+  }, []);
+
+  const handleUndo = async () => {
+    const success = await undoLastAction();
+    if (success) {
+      setShowUndo(false);
+      await fetchExpenses();
+      return true;
+    }
+    return false;
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>All Expenses</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => navigation.navigate('AddExpense')}
-        >
-          <Text style={[styles.addButtonText, { color: '#ffffff' }]}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="All Expenses"
+        showBackButton={true}
+        rightComponent={
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('AddExpense')}
+            activeOpacity={0.8}
+          >
+            <Icon name="add" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        }
+      />
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading expenses...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading expenses...
+          </Text>
         </View>
       ) : expenses.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.emptyText, { color: colors.text }]}>No expenses yet</Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Start tracking your expenses!</Text>
+          <Icon name="receipt-outline" size={80} color={colors.textTertiary} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>
+            No expenses yet
+          </Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            Start tracking your expenses!
+          </Text>
+          <TouchableOpacity
+            style={[styles.addFirstButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('AddExpense')}
+          >
+            <Icon name="add" size={20} color="#ffffff" />
+            <Text style={styles.addFirstButtonText}>Add Expense</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={expenses}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           renderItem={({ item: expense }) => (
-            <TouchableOpacity
-              style={[styles.expenseItem, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
+            <Card
+              variant="elevated"
               onPress={() => handleEdit(expense.id)}
-              activeOpacity={0.7}
+              style={styles.expenseCard}
             >
-              <View style={styles.expenseInfo}>
-                <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
-                <Text style={[styles.expenseDescription, { color: colors.textSecondary }]}>
-                  {expense.description || 'No description'}
-                </Text>
-                {expenseTags[expense.id] && expenseTags[expense.id].length > 0 && (
-                  <View style={styles.tagsContainer}>
-                    {expenseTags[expense.id].map((tag) => (
-                      <TagChip key={tag.id} tag={tag} size="small" />
-                    ))}
-                  </View>
-                )}
-                <Text style={[styles.expenseDate, { color: colors.textTertiary }]}>
-                  {format(new Date(expense.date), 'MMM dd, yyyy')}
-                </Text>
-              </View>
-              <View style={styles.expenseRight}>
-                <Text style={[styles.expenseAmount, { color: colors.text }]}>
-                  {expense.currencyCode} {expense.amount.toFixed(2)}
-                </Text>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDelete(expense.id)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              <View style={styles.expenseContent}>
+                <View
+                  style={[
+                    styles.expenseIconContainer,
+                    { backgroundColor: colors.primary + '15' },
+                  ]}
                 >
-                  <Text style={styles.deleteButtonText}>🗑️</Text>
-                </TouchableOpacity>
+                  <Icon name="receipt" size={22} color={colors.primary} />
+                </View>
+                <View style={styles.expenseInfo}>
+                  <View style={styles.categoryRow}>
+                    <Text
+                      style={[styles.expenseCategory, { color: colors.text }]}
+                    >
+                      {expense.category}
+                    </Text>
+                    {expense.groupId && (
+                      <View
+                        style={[
+                          styles.splitBadge,
+                          { backgroundColor: colors.secondary + '20' },
+                        ]}
+                      >
+                        <Icon
+                          name="people"
+                          size={12}
+                          color={colors.secondary}
+                        />
+                        <Text
+                          style={[
+                            styles.splitBadgeText,
+                            { color: colors.secondary },
+                          ]}
+                        >
+                          {groups.find(g => g.id === expense.groupId)?.name ||
+                            'Split'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.expenseDescription,
+                      { color: colors.textSecondary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {expense.description || 'No description'}
+                  </Text>
+                  {expenseTags[expense.id] &&
+                    expenseTags[expense.id].length > 0 && (
+                      <View style={styles.tagsContainer}>
+                        {expenseTags[expense.id].map(tag => (
+                          <TagChip key={tag.id} tag={tag} size="small" />
+                        ))}
+                      </View>
+                    )}
+                  <Text
+                    style={[styles.expenseDate, { color: colors.textTertiary }]}
+                  >
+                    {format(new Date(expense.date), 'MMM dd, yyyy')}
+                  </Text>
+                </View>
+                <View style={styles.expenseRight}>
+                  <Text style={[styles.expenseAmount, { color: colors.text }]}>
+                    {expense.currencyCode} {expense.amount.toFixed(2)}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={e => {
+                      e.stopPropagation();
+                      handleDelete(expense.id);
+                    }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Icon name="trash-outline" size={20} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </TouchableOpacity>
+            </Card>
           )}
           contentContainerStyle={styles.listContent}
           initialNumToRender={10}
           maxToRenderPerBatch={10}
           windowSize={10}
           removeClippedSubviews={true}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
       {showUndo && (
-        <View
-          style={[
-            styles.undoContainer,
-            {
-              backgroundColor: colors.card,
-              shadowColor: colors.shadow,
-            },
-          ]}
-        >
-          <Text style={[styles.undoMessage, { color: colors.text }]}>Expense deleted</Text>
-          <TouchableOpacity
-            onPress={async () => {
-              const success = await undoLastAction();
-              if (success) {
-                setShowUndo(false);
-                await fetchExpenses();
-              }
-            }}
-            style={styles.undoButton}
-          >
-            <Text style={[styles.undoText, { color: colors.primary }]}>UNDO</Text>
-          </TouchableOpacity>
-        </View>
+        <UndoButton
+          message="Expense deleted"
+          onUndo={handleUndo}
+          autoHideDuration={5000}
+        />
       )}
     </View>
   );
@@ -188,25 +270,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
   addButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   centerContainer: {
     flex: 1,
@@ -215,95 +284,101 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 15,
+    marginTop: 16,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 22,
+    fontWeight: '600',
+    marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 15,
+    marginBottom: 24,
+    textAlign: 'center',
   },
-  list: {
-    flex: 1,
+  addFirstButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  addFirstButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  expenseCard: {
+    marginBottom: 12,
     padding: 16,
   },
-  expenseItem: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+  expenseContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  },
+  expenseIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   expenseInfo: {
     flex: 1,
   },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
   expenseCategory: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
+  },
+  splitBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  splitBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   expenseDescription: {
     fontSize: 14,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 4,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   expenseDate: {
     fontSize: 12,
+    fontWeight: '500',
   },
   expenseRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-end',
+    gap: 8,
   },
   expenseAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   deleteButton: {
     padding: 4,
   },
-  deleteButtonText: {
-    fontSize: 18,
-  },
-  undoContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  undoMessage: {
-    fontSize: 14,
-  },
-  undoButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  undoText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
 });
-

@@ -1,68 +1,126 @@
 /**
- * Text Input Component
+ * Text Input Component - Modern redesigned input with focus states
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TextInput, TextInputProps, StyleSheet, Text, View } from 'react-native';
 import { useThemeContext } from '@/context/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  helperText?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export const Input: React.FC<InputProps> = ({
   label,
   error,
+  helperText,
+  leftIcon,
+  rightIcon,
   style,
   ...props
 }) => {
-  const { colors } = useThemeContext();
+  const { colors, isDark } = useThemeContext();
+  const [isFocused, setIsFocused] = useState(false);
+
+  const borderColor = error
+    ? colors.error
+    : isFocused
+    ? colors.primary
+    : colors.inputBorder;
 
   return (
     <View style={styles.container}>
-      {label && <Text style={[styles.label, { color: colors.text }]}>{label}</Text>}
-      <TextInput
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      )}
+      <View
         style={[
-          styles.input,
+          styles.inputContainer,
           {
             backgroundColor: colors.inputBackground,
-            borderColor: error ? colors.error : colors.inputBorder,
-            color: colors.text,
+            borderColor,
+            borderWidth: isFocused ? 2 : 1.5,
           },
           error && styles.inputError,
-          style,
         ]}
-        placeholderTextColor={colors.placeholder}
-        {...props}
-      />
-      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
+      >
+        {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: colors.text,
+              flex: 1,
+            },
+            leftIcon && styles.inputWithLeftIcon,
+            rightIcon && styles.inputWithRightIcon,
+            style,
+          ]}
+          placeholderTextColor={colors.placeholder}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          {...props}
+        />
+        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+      </View>
+      {(error || helperText) && (
+        <Text
+          style={[
+            styles.helperText,
+            { color: error ? colors.error : colors.textSecondary },
+          ]}
+        >
+          {error || helperText}
+        </Text>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: 0.2,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 52,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     fontSize: 16,
+    paddingVertical: 14,
+  },
+  inputWithLeftIcon: {
+    marginLeft: 12,
+  },
+  inputWithRightIcon: {
+    marginRight: 12,
   },
   inputError: {
-    // Error border color is handled inline
+    // Error styling handled inline
   },
-  errorText: {
+  leftIcon: {
+    marginRight: 0,
+  },
+  rightIcon: {
+    marginLeft: 0,
+  },
+  helperText: {
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
+    lineHeight: 16,
   },
 });
 

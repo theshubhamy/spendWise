@@ -20,6 +20,18 @@ const ENCRYPTION_KEY_ALIAS = 'spendwise_encryption_key';
 let encryptionKey: string | null = null;
 
 /**
+ * Convert hex string to Uint8Array bytes
+ * react-native-libsodium doesn't have from_hex, so we implement it manually
+ */
+const hexToBytes = (hex: string): Uint8Array => {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+};
+
+/**
  * Initialize encryption key from device keychain
  * Key is 32 bytes (256 bits) for XChaCha20-Poly1305
  */
@@ -67,7 +79,7 @@ export const encrypt = async (plaintext: string): Promise<string> => {
 
   try {
     // Convert key from hex to bytes
-    const keyBytes = sodium.from_hex(encryptionKey);
+    const keyBytes = hexToBytes(encryptionKey);
 
     // Generate random 24-byte nonce for XChaCha20-Poly1305
     const nonce = sodium.randombytes_buf(24);
@@ -145,7 +157,7 @@ export const decrypt = async (ciphertext: string): Promise<string> => {
     const ciphertextString = combined.substring(1 + nonceLength);
 
     // Convert to bytes
-    const keyBytes = sodium.from_hex(encryptionKey);
+    const keyBytes = hexToBytes(encryptionKey);
     const nonce = sodium.from_string(nonceString);
     const ciphertextBytes = sodium.from_string(ciphertextString);
 

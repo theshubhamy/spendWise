@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useExpenseStore } from '@/store';
 import { useThemeContext } from '@/context/ThemeContext';
 import {
@@ -22,7 +22,7 @@ export const ReportsScreen: React.FC = () => {
   const { colors } = useThemeContext();
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
   const [tagAnalysis, setTagAnalysis] = useState<TagAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -51,60 +51,147 @@ export const ReportsScreen: React.FC = () => {
   const avgDaily = getAverageDailySpending(expenses);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Reports & Analytics</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>
+          Reports & Analytics
+        </Text>
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Spent</Text>
-          <Text style={[styles.statValue, { color: colors.text }]}>${totalExpenses.toFixed(2)}</Text>
+        <View
+          style={[
+            styles.statCard,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Total Spent
+          </Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            ${totalExpenses.toFixed(2)}
+          </Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Expenses</Text>
-          <Text style={[styles.statValue, { color: colors.text }]}>{expenses.length}</Text>
+        <View
+          style={[
+            styles.statCard,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Total Expenses
+          </Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {expenses.length}
+          </Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Daily</Text>
-          <Text style={[styles.statValue, { color: colors.text }]}>${avgDaily.toFixed(2)}</Text>
+        <View
+          style={[
+            styles.statCard,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Avg Daily
+          </Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            ${avgDaily.toFixed(2)}
+          </Text>
         </View>
       </View>
 
       {monthlyTrends.length > 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Monthly Trends (Last 6 Months)</Text>
-          {monthlyTrends.map((trend) => (
-            <View key={trend.month} style={[styles.trendItem, { borderBottomColor: colors.borderLight }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Monthly Trends (Last 6 Months)
+          </Text>
+          {monthlyTrends.map(trend => (
+            <View
+              key={trend.month}
+              style={[
+                styles.trendItem,
+                { borderBottomColor: colors.borderLight },
+              ]}
+            >
               <View style={styles.trendInfo}>
-                <Text style={[styles.trendMonth, { color: colors.text }]}>{trend.month}</Text>
-                <Text style={[styles.trendCount, { color: colors.textSecondary }]}>{trend.count} expenses</Text>
+                <Text style={[styles.trendMonth, { color: colors.text }]}>
+                  {trend.month}
+                </Text>
+                <Text
+                  style={[styles.trendCount, { color: colors.textSecondary }]}
+                >
+                  {trend.count} expenses
+                </Text>
               </View>
-              <Text style={[styles.trendAmount, { color: colors.text }]}>${trend.total.toFixed(2)}</Text>
+              <Text style={[styles.trendAmount, { color: colors.text }]}>
+                ${trend.total.toFixed(2)}
+              </Text>
             </View>
           ))}
         </View>
       )}
 
       {categoryAnalysis.length > 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Category Breakdown</Text>
-          {categoryAnalysis.slice(0, 10).map((item) => (
-            <View key={item.category} style={[styles.categoryItem, { borderBottomColor: colors.borderLight }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Category Breakdown
+          </Text>
+          {categoryAnalysis.slice(0, 10).map(item => (
+            <View
+              key={item.category}
+              style={[
+                styles.categoryItem,
+                { borderBottomColor: colors.borderLight },
+              ]}
+            >
               <View style={styles.categoryInfo}>
-                <Text style={[styles.categoryName, { color: colors.text }]}>{item.category}</Text>
-                <View style={[styles.percentageBar, { backgroundColor: colors.borderLight }]}>
+                <Text style={[styles.categoryName, { color: colors.text }]}>
+                  {item.category}
+                </Text>
+                <View
+                  style={[
+                    styles.percentageBar,
+                    { backgroundColor: colors.borderLight },
+                  ]}
+                >
                   <View
                     style={[
                       styles.percentageFill,
-                      { width: `${item.percentage}%`, backgroundColor: colors.primary },
+                      {
+                        width: `${item.percentage}%`,
+                        backgroundColor: colors.primary,
+                      },
                     ]}
                   />
                 </View>
               </View>
               <View style={styles.categoryRight}>
-                <Text style={[styles.categoryAmount, { color: colors.text }]}>${item.total.toFixed(2)}</Text>
-                <Text style={[styles.categoryPercentage, { color: colors.textSecondary }]}>
+                <Text style={[styles.categoryAmount, { color: colors.text }]}>
+                  ${item.total.toFixed(2)}
+                </Text>
+                <Text
+                  style={[
+                    styles.categoryPercentage,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   {item.percentage.toFixed(1)}%
                 </Text>
               </View>
@@ -114,32 +201,75 @@ export const ReportsScreen: React.FC = () => {
       )}
 
       {tagAnalysis.length > 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tag-Based Analysis</Text>
-          {tagAnalysis.map((tag) => (
-            <View key={tag.tagId} style={[styles.tagItem, { borderBottomColor: colors.borderLight }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Tag-Based Analysis
+          </Text>
+          {tagAnalysis.map(tag => (
+            <View
+              key={tag.tagId}
+              style={[
+                styles.tagItem,
+                { borderBottomColor: colors.borderLight },
+              ]}
+            >
               <View style={[styles.tagColor, { backgroundColor: tag.color }]} />
               <View style={styles.tagInfo}>
-                <Text style={[styles.tagName, { color: colors.text }]}>{tag.tagName}</Text>
-                <Text style={[styles.tagCount, { color: colors.textSecondary }]}>{tag.count} expenses</Text>
+                <Text style={[styles.tagName, { color: colors.text }]}>
+                  {tag.tagName}
+                </Text>
+                <Text
+                  style={[styles.tagCount, { color: colors.textSecondary }]}
+                >
+                  {tag.count} expenses
+                </Text>
               </View>
-              <Text style={[styles.tagAmount, { color: colors.text }]}>${tag.total.toFixed(2)}</Text>
+              <Text style={[styles.tagAmount, { color: colors.text }]}>
+                ${tag.total.toFixed(2)}
+              </Text>
             </View>
           ))}
         </View>
       )}
 
       {highestExpenses.length > 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Highest Expenses</Text>
-          {highestExpenses.map((expense) => (
-            <View key={expense.id} style={[styles.expenseItem, { borderBottomColor: colors.borderLight }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Highest Expenses
+          </Text>
+          {highestExpenses.map(expense => (
+            <View
+              key={expense.id}
+              style={[
+                styles.expenseItem,
+                { borderBottomColor: colors.borderLight },
+              ]}
+            >
               <View style={styles.expenseInfo}>
-                <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
-                <Text style={[styles.expenseDescription, { color: colors.textSecondary }]}>
+                <Text style={[styles.expenseCategory, { color: colors.text }]}>
+                  {expense.category}
+                </Text>
+                <Text
+                  style={[
+                    styles.expenseDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   {expense.description || 'No description'}
                 </Text>
-                <Text style={[styles.expenseDate, { color: colors.textTertiary }]}>
+                <Text
+                  style={[styles.expenseDate, { color: colors.textTertiary }]}
+                >
                   {format(new Date(expense.date), 'MMM dd, yyyy')}
                 </Text>
               </View>
@@ -152,8 +282,15 @@ export const ReportsScreen: React.FC = () => {
       )}
 
       {expenses.length === 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No expenses to analyze yet</Text>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: colors.surface, shadowColor: colors.shadow },
+          ]}
+        >
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No expenses to analyze yet
+          </Text>
         </View>
       )}
     </ScrollView>
@@ -304,10 +441,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  expenseInfo: {
+    flex: 1,
+  },
+  expenseCategory: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
   expenseDescription: {
     fontSize: 14,
     marginTop: 2,
     marginBottom: 4,
   },
+  expenseDate: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  expenseAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
 });
-

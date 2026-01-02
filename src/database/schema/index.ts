@@ -2,7 +2,7 @@
  * Database schema definitions
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2; // Incremented for Splitwise features
 
 export const TABLES = {
   EXPENSES: 'expenses',
@@ -15,6 +15,7 @@ export const TABLES = {
   REMINDERS: 'reminders',
   CURRENCIES: 'currencies',
   UNDO_HISTORY: 'undo_history',
+  PAYMENTS: 'payments',
 } as const;
 
 export const CREATE_TABLES = {
@@ -29,9 +30,11 @@ export const CREATE_TABLES = {
       notes_encrypted TEXT,
       date TEXT NOT NULL,
       group_id TEXT,
+      paid_by_member_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      FOREIGN KEY (group_id) REFERENCES ${TABLES.EXPENSE_GROUPS}(id) ON DELETE SET NULL
+      FOREIGN KEY (group_id) REFERENCES ${TABLES.EXPENSE_GROUPS}(id) ON DELETE SET NULL,
+      FOREIGN KEY (paid_by_member_id) REFERENCES ${TABLES.GROUP_MEMBERS}(id) ON DELETE SET NULL
     );
   `,
 
@@ -145,12 +148,30 @@ export const CREATE_TABLES = {
       timestamp TEXT NOT NULL
     );
   `,
+
+  PAYMENTS: `
+    CREATE TABLE IF NOT EXISTS ${TABLES.PAYMENTS} (
+      id TEXT PRIMARY KEY,
+      group_id TEXT NOT NULL,
+      from_member_id TEXT NOT NULL,
+      to_member_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      currency_code TEXT NOT NULL,
+      date TEXT NOT NULL,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (group_id) REFERENCES ${TABLES.EXPENSE_GROUPS}(id) ON DELETE CASCADE,
+      FOREIGN KEY (from_member_id) REFERENCES ${TABLES.GROUP_MEMBERS}(id) ON DELETE CASCADE,
+      FOREIGN KEY (to_member_id) REFERENCES ${TABLES.GROUP_MEMBERS}(id) ON DELETE CASCADE
+    );
+  `,
 };
 
 // Indexes for performance
 export const CREATE_INDEXES = [
   `CREATE INDEX IF NOT EXISTS idx_expenses_date ON ${TABLES.EXPENSES}(date);`,
   `CREATE INDEX IF NOT EXISTS idx_expenses_group_id ON ${TABLES.EXPENSES}(group_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_expenses_paid_by ON ${TABLES.EXPENSES}(paid_by_member_id);`,
   `CREATE INDEX IF NOT EXISTS idx_expenses_category ON ${TABLES.EXPENSES}(category);`,
   `CREATE INDEX IF NOT EXISTS idx_expenses_currency_code ON ${TABLES.EXPENSES}(currency_code);`,
   `CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON ${TABLES.GROUP_MEMBERS}(group_id);`,
@@ -161,5 +182,8 @@ export const CREATE_INDEXES = [
   `CREATE INDEX IF NOT EXISTS idx_recurring_expenses_start_date ON ${TABLES.RECURRING_EXPENSES}(start_date);`,
   `CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_date ON ${TABLES.REMINDERS}(scheduled_date);`,
   `CREATE INDEX IF NOT EXISTS idx_undo_history_timestamp ON ${TABLES.UNDO_HISTORY}(timestamp);`,
+  `CREATE INDEX IF NOT EXISTS idx_payments_group_id ON ${TABLES.PAYMENTS}(group_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_payments_from_member ON ${TABLES.PAYMENTS}(from_member_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_payments_to_member ON ${TABLES.PAYMENTS}(to_member_id);`,
 ];
 

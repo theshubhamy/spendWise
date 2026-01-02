@@ -1,40 +1,67 @@
 /**
- * Undo Button Component - Shows undo option with snackbar-style notification
+ * Undo Button Component - Modern redesigned snackbar-style notification
  */
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { useExpenseStore } from '@/store';
 import { useThemeContext } from '@/context/ThemeContext';
+import Icon from '@react-native-vector-icons/ionicons';
 
-export const UndoButton: React.FC = () => {
-  const { colors } = useThemeContext();
+interface UndoButtonProps {
+  message?: string;
+  onUndo?: () => Promise<boolean>;
+  autoHideDuration?: number;
+}
+
+export const UndoButton: React.FC<UndoButtonProps> = ({
+  message = 'Action completed',
+  onUndo,
+  autoHideDuration = 5000,
+}) => {
+  const { colors, isDark } = useThemeContext();
   const { undoLastAction } = useExpenseStore();
   const [visible, setVisible] = useState(false);
+  const [slideAnim] = useState(new Animated.Value(100));
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     if (visible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-      // Auto-hide after 5 seconds
+      // Auto-hide after duration
       const timer = setTimeout(() => {
         hideUndo();
-      }, 5000);
+      }, autoHideDuration);
 
       return () => clearTimeout(timer);
     } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 100,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [visible, fadeAnim]);
+  }, [visible, slideAnim, fadeAnim, autoHideDuration]);
 
   const showUndo = () => {
     setVisible(true);
@@ -45,14 +72,11 @@ export const UndoButton: React.FC = () => {
   };
 
   const handleUndo = async () => {
-    const success = await undoLastAction();
+    const success = onUndo ? await onUndo() : await undoLastAction();
     if (success) {
       hideUndo();
     }
   };
-
-  // Expose showUndo method (would need context or event system in real app)
-  // For now, we'll use a simple approach
 
   if (!visible) {
     return null;
@@ -64,13 +88,23 @@ export const UndoButton: React.FC = () => {
         styles.container,
         {
           opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
           backgroundColor: colors.surface,
           shadowColor: colors.shadow,
         },
       ]}
     >
-      <Text style={[styles.message, { color: colors.text }]}>Action completed</Text>
-      <TouchableOpacity onPress={handleUndo} style={styles.undoButton}>
+      <View style={styles.content}>
+        <Icon name="checkmark-circle" size={20} color={colors.success} />
+        <Text style={[styles.message, { color: colors.text }]}>
+          {message}
+        </Text>
+      </View>
+      <TouchableOpacity
+        onPress={handleUndo}
+        style={styles.undoButton}
+        activeOpacity={0.7}
+      >
         <Text style={[styles.undoText, { color: colors.primary }]}>UNDO</Text>
       </TouchableOpacity>
     </Animated.View>
@@ -80,30 +114,40 @@ export const UndoButton: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
+    bottom: 24,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   message: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '500',
+    marginLeft: 12,
+    flex: 1,
   },
   undoButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 12,
   },
   undoText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
 

@@ -1,5 +1,5 @@
 /**
- * Screen Header Component - Standardized header for screens
+ * Screen Header Component - Modern redesigned header
  */
 
 import React, { ReactNode } from 'react';
@@ -14,6 +14,7 @@ import {
 import { useThemeContext } from '@/context/ThemeContext';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenHeaderProps {
   title: string;
@@ -23,6 +24,7 @@ interface ScreenHeaderProps {
   onBackPress?: () => void;
   style?: ViewStyle;
   titleStyle?: TextStyle;
+  transparent?: boolean;
 }
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -33,9 +35,11 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   onBackPress,
   style,
   titleStyle,
+  transparent = false,
 }) => {
-  const { colors } = useThemeContext();
+  const { colors, isDark } = useThemeContext();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -46,13 +50,29 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   };
 
   return (
-    <View style={[styles.header, { backgroundColor: colors.surface }, style]}>
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: transparent ? 'transparent' : colors.surface,
+          paddingTop: insets.top + 8,
+          borderBottomColor: colors.border,
+        },
+        style,
+      ]}
+    >
       <View style={styles.leftSection}>
         {showBackButton && (
           <TouchableOpacity
             onPress={handleBackPress}
-            style={styles.backButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: colors.surface,
+              },
+            ]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
           >
             <Icon name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -86,9 +106,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 56,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    minHeight: 64,
+    borderBottomWidth: 0.5,
   },
   leftSection: {
     flexDirection: 'row',
@@ -96,23 +117,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backButton: {
-    marginRight: 8,
-    padding: 4,
+    marginRight: 12,
+    padding: 6,
+    borderRadius: 20,
   },
   titleContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '700',
-    lineHeight: 24,
+    lineHeight: 34,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 14,
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '400',
   },
   rightSection: {
     marginLeft: 16,
+    alignItems: 'flex-end',
   },
 });
 

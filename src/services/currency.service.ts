@@ -192,7 +192,7 @@ const getCurrencyName = (code: string): string => {
 /**
  * Get currency symbol by code
  */
-const getCurrencySymbol = (code: string): string => {
+export const getCurrencySymbol = (code: string): string => {
   const symbols: Record<string, string> = {
     USD: '$',
     EUR: '€',
@@ -201,6 +201,26 @@ const getCurrencySymbol = (code: string): string => {
     JPY: '¥',
     CAD: 'C$',
     AUD: 'A$',
+    CHF: 'CHF',
+    CNY: '¥',
+    SGD: 'S$',
+    HKD: 'HK$',
+    NZD: 'NZ$',
+    KRW: '₩',
+    MXN: '$',
+    BRL: 'R$',
+    ZAR: 'R',
+    RUB: '₽',
+    AED: 'د.إ',
+    SAR: '﷼',
+    THB: '฿',
+    MYR: 'RM',
+    IDR: 'Rp',
+    PHP: '₱',
+    PKR: '₨',
+    BDT: '৳',
+    LKR: '₨',
+    NPR: '₨',
   };
   return symbols[code] || code;
 };

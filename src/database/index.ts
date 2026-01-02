@@ -4,7 +4,7 @@
 
 import { open, QuickSQLiteConnection, QueryResult } from 'react-native-quick-sqlite';
 import { DB_NAME } from '@/constants';
-import { CREATE_TABLES, CREATE_INDEXES } from '@/database/schema';
+import { CREATE_TABLES, CREATE_INDEXES, TABLES } from '@/database/schema';
 import { initializeDefaultCurrencies } from '@/services/currency.service';
 
 let db: QuickSQLiteConnection | null = null;
@@ -21,9 +21,31 @@ export const initDatabase = async (): Promise<void> => {
       db?.execute(sql);
     });
 
+    // Migrate existing database (add new columns if they don't exist)
+    try {
+      // Add paid_by_member_id column if it doesn't exist (for existing databases)
+      db?.execute(`
+        ALTER TABLE ${TABLES.EXPENSES}
+        ADD COLUMN paid_by_member_id TEXT
+        REFERENCES ${TABLES.GROUP_MEMBERS}(id) ON DELETE SET NULL;
+      `);
+    } catch (error) {
+      // Column might already exist, ignore error
+      if (!(error as Error).message.includes('duplicate column')) {
+        console.warn('Migration warning:', error);
+      }
+    }
+
     // Create indexes
     CREATE_INDEXES.forEach((sql) => {
-      db?.execute(sql);
+      try {
+        db?.execute(sql);
+      } catch (error) {
+        // Index might already exist, ignore error
+        if (!(error as Error).message.includes('already exists')) {
+          console.warn('Index creation warning:', error);
+        }
+      }
     });
 
     // Initialize default currencies

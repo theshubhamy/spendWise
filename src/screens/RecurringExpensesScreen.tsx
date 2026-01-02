@@ -16,15 +16,16 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecurringStore } from '@/store/recurringStore';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { format } from 'date-fns';
-import { RECURRING_INTERVALS } from '@/constants';
 import { useThemeContext } from '@/context/ThemeContext';
 
-type RecurringScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type RecurringScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
 
 export const RecurringExpensesScreen: React.FC = () => {
   const { colors } = useThemeContext();
   const navigation = useNavigation<RecurringScreenNavigationProp>();
-  const { recurring, isLoading, fetchRecurring, deleteRecurring } = useRecurringStore();
+  const { recurring, isLoading, fetchRecurring, deleteRecurring } =
+    useRecurringStore();
 
   useEffect(() => {
     fetchRecurring();
@@ -42,7 +43,7 @@ export const RecurringExpensesScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deleteRecurring(id);
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to delete recurring expense');
             }
           },
@@ -68,30 +69,41 @@ export const RecurringExpensesScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Recurring Expenses</Text>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>
+          Recurring Expenses
+        </Text>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.primary }]}
           onPress={() => navigation.navigate('CreateRecurring')}
         >
-          <Text style={[styles.addButtonText, { color: '#ffffff' }]}>+ Add</Text>
+          <Text style={styles.addButtonText}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading...
+          </Text>
         </View>
       ) : recurring.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No recurring expenses</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No recurring expenses
+          </Text>
           <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
             Create recurring expenses for rent, subscriptions, and more
           </Text>
         </View>
       ) : (
         <ScrollView style={styles.list}>
-          {recurring.map((item) => (
+          {recurring.map(item => (
             <View
               key={item.id}
               style={[
@@ -103,8 +115,15 @@ export const RecurringExpensesScreen: React.FC = () => {
               ]}
             >
               <View style={styles.itemInfo}>
-                <Text style={[styles.itemCategory, { color: colors.text }]}>{item.category}</Text>
-                <Text style={[styles.itemDescription, { color: colors.textSecondary }]}>
+                <Text style={[styles.itemCategory, { color: colors.text }]}>
+                  {item.category}
+                </Text>
+                <Text
+                  style={[
+                    styles.itemDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   {item.description || 'No description'}
                 </Text>
                 <Text style={[styles.itemInterval, { color: colors.primary }]}>
@@ -122,7 +141,11 @@ export const RecurringExpensesScreen: React.FC = () => {
                   style={styles.deleteButton}
                   onPress={() => handleDelete(item.id)}
                 >
-                  <Text style={[styles.deleteButtonText, { color: colors.error }]}>Delete</Text>
+                  <Text
+                    style={[styles.deleteButtonText, { color: colors.error }]}
+                  >
+                    Delete
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -156,6 +179,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#ffffff',
   },
   centerContainer: {
     flex: 1,
@@ -225,4 +249,3 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
-

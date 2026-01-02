@@ -2,7 +2,7 @@
  * Group Detail Screen - View group details, members, and balances
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,6 @@ import {
   getSettlementSuggestions,
 } from '@/services/group.service';
 import { GroupMember } from '@/types';
-import { format } from 'date-fns';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -42,14 +41,12 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
 
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
-  const [settlements, setSettlements] = useState<Array<{ from: string; to: string; amount: number }>>([]);
+  const [settlements, setSettlements] = useState<
+    Array<{ from: string; to: string; amount: number }>
+  >([]);
   const [newMemberName, setNewMemberName] = useState('');
 
-  useEffect(() => {
-    loadGroupData();
-  }, [groupId]);
-
-  const loadGroupData = async () => {
+  const loadGroupData = useCallback(async () => {
     if (!group) return;
 
     const groupMembers = await getGroupMembers(groupId);
@@ -60,7 +57,11 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
 
     const settlementSuggestions = await getSettlementSuggestions(groupId);
     setSettlements(settlementSuggestions);
-  };
+  }, [groupId, group]);
+
+  useEffect(() => {
+    loadGroupData();
+  }, [loadGroupData]);
 
   const handleAddMember = async () => {
     if (!newMemberName.trim()) {
@@ -73,31 +74,27 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
       await addMemberToGroup(groupId, userId, newMemberName.trim());
       setNewMemberName('');
       await loadGroupData();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to add member');
     }
   };
 
   const handleRemoveMember = (member: GroupMember) => {
-    Alert.alert(
-      'Remove Member',
-      `Remove ${member.name} from this group?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeMemberFromGroup(member.id);
-              await loadGroupData();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to remove member');
-            }
-          },
+    Alert.alert('Remove Member', `Remove ${member.name} from this group?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeMemberFromGroup(member.id);
+            await loadGroupData();
+          } catch {
+            Alert.alert('Error', 'Failed to remove member');
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleDeleteGroup = () => {
@@ -114,7 +111,7 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
               await deleteGroup(groupId);
               await fetchGroups();
               navigation.goBack();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to delete group');
             }
           },
@@ -126,31 +123,48 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
   if (!group) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.textSecondary }]}>Group not found</Text>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+          Group not found
+        </Text>
       </View>
     );
   }
 
   const getMemberName = (memberId: string): string => {
-    return members.find((m) => m.id === memberId)?.name || 'Unknown';
+    return members.find(m => m.id === memberId)?.name || 'Unknown';
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <View>
-          <Text style={[styles.title, { color: colors.text }]}>{group.name}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {group.name}
+          </Text>
           {group.description && (
-            <Text style={[styles.description, { color: colors.textSecondary }]}>{group.description}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              {group.description}
+            </Text>
           )}
         </View>
         <TouchableOpacity onPress={handleDeleteGroup}>
-          <Text style={[styles.deleteButton, { color: colors.error }]}>Delete</Text>
+          <Text style={[styles.deleteButton, { color: colors.error }]}>
+            Delete
+          </Text>
         </TouchableOpacity>
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Members ({members.length})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Members ({members.length})
+        </Text>
         <View style={styles.addMemberContainer}>
           <TextInput
             style={[
@@ -170,19 +184,33 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
             style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={handleAddMember}
           >
-            <Text style={[styles.addButtonText, { color: '#ffffff' }]}>Add</Text>
+            <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
-        {members.map((member) => (
-          <View key={member.id} style={[styles.memberItem, { borderBottomColor: colors.borderLight }]}>
+        {members.map(member => (
+          <View
+            key={member.id}
+            style={[
+              styles.memberItem,
+              { borderBottomColor: colors.borderLight },
+            ]}
+          >
             <View>
-              <Text style={[styles.memberName, { color: colors.text }]}>{member.name}</Text>
+              <Text style={[styles.memberName, { color: colors.text }]}>
+                {member.name}
+              </Text>
               {member.email && (
-                <Text style={[styles.memberEmail, { color: colors.textSecondary }]}>{member.email}</Text>
+                <Text
+                  style={[styles.memberEmail, { color: colors.textSecondary }]}
+                >
+                  {member.email}
+                </Text>
               )}
             </View>
             <TouchableOpacity onPress={() => handleRemoveMember(member)}>
-              <Text style={[styles.removeButton, { color: colors.error }]}>Remove</Text>
+              <Text style={[styles.removeButton, { color: colors.error }]}>
+                Remove
+              </Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -190,12 +218,21 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
 
       {settlements.length > 0 && (
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Settlement Suggestions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Settlement Suggestions
+          </Text>
           {settlements.map((settlement, index) => (
-            <View key={index} style={[styles.settlementItem, { borderBottomColor: colors.borderLight }]}>
+            <View
+              key={index}
+              style={[
+                styles.settlementItem,
+                { borderBottomColor: colors.borderLight },
+              ]}
+            >
               <Text style={[styles.settlementText, { color: colors.text }]}>
-                {getMemberName(settlement.from)} owes {getMemberName(settlement.to)}{' '}
-                {group.currencyCode} {settlement.amount.toFixed(2)}
+                {getMemberName(settlement.from)} owes{' '}
+                {getMemberName(settlement.to)} {group.currencyCode}{' '}
+                {settlement.amount.toFixed(2)}
               </Text>
             </View>
           ))}
@@ -203,12 +240,22 @@ export const GroupDetailScreen: React.FC<GroupDetailScreenProps> = ({
       )}
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Balances</Text>
-        {members.map((member) => {
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Balances
+        </Text>
+        {members.map(member => {
           const balance = balances[member.id] || 0;
           return (
-            <View key={member.id} style={[styles.balanceItem, { borderBottomColor: colors.borderLight }]}>
-              <Text style={[styles.balanceName, { color: colors.text }]}>{member.name}</Text>
+            <View
+              key={member.id}
+              style={[
+                styles.balanceItem,
+                { borderBottomColor: colors.borderLight },
+              ]}
+            >
+              <Text style={[styles.balanceName, { color: colors.text }]}>
+                {member.name}
+              </Text>
               <Text
                 style={[
                   styles.balanceAmount,
@@ -324,4 +371,3 @@ const styles = StyleSheet.create({
     padding: 40,
   },
 });
-

@@ -12,6 +12,7 @@ export interface Expense {
   notes?: string; // Encrypted
   date: string; // ISO date string
   groupId?: string;
+  paidByMemberId?: string; // Who paid for this expense (for group expenses)
   createdAt: string;
   updatedAt: string;
 }
@@ -109,3 +110,17 @@ export interface AppSettings {
   autoLockTimeout: number; // in minutes
   theme: 'light' | 'dark' | 'system';
 }
+
+export interface Payment {
+  id: string;
+  groupId: string;
+  fromMemberId: string;
+  toMemberId: string;
+  amount: number;
+  currencyCode: string;
+  date: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export type SplitType = 'equal' | 'percentage' | 'custom';

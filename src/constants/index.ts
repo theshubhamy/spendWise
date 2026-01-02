@@ -32,8 +32,8 @@ export const STORAGE_KEYS = {
 
 // Default Settings
 export const DEFAULT_SETTINGS = {
-  BASE_CURRENCY: 'USD',
-  BIOMETRIC_ENABLED: false,
+  BASE_CURRENCY: 'INR',
+  BIOMETRIC_ENABLED: true,
   AUTO_LOCK_TIMEOUT: 5, // 5 minutes
   THEME: 'system' as const,
 };
@@ -97,4 +97,3 @@ export const DEFAULT_PAGE_SIZE = 20;
 
 // Undo History
 export const MAX_UNDO_HISTORY = 50;
-

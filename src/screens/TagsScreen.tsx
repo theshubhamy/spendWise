@@ -22,7 +22,7 @@ export const TagsScreen: React.FC = () => {
   const { colors } = useThemeContext();
   const { tags, isLoading, fetchTags, createTag, deleteTag } = useTagStore();
   const [newTagName, setNewTagName] = useState('');
-  const [selectedColor, setSelectedColor] = useState(TAG_COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState<string>(TAG_COLORS[0]);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export const TagsScreen: React.FC = () => {
       await createTag(newTagName.trim(), selectedColor);
       setNewTagName('');
       setSelectedColor(TAG_COLORS[0]);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to create tag. It may already exist.');
     }
   };
@@ -56,7 +56,7 @@ export const TagsScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deleteTag(tag.id);
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to delete tag');
             }
           },
@@ -66,14 +66,25 @@ export const TagsScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <Text style={[styles.title, { color: colors.text }]}>Tags</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Organize expenses with tags</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Organize expenses with tags
+        </Text>
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Create New Tag</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Create New Tag
+        </Text>
         <View style={styles.createTagContainer}>
           <TextInput
             style={[
@@ -90,28 +101,43 @@ export const TagsScreen: React.FC = () => {
             placeholderTextColor={colors.placeholder}
           />
           <TouchableOpacity
-            style={[styles.colorButton, { backgroundColor: selectedColor, borderColor: colors.border }]}
+            style={[
+              styles.colorButton,
+              { backgroundColor: selectedColor, borderColor: colors.border },
+            ]}
             onPress={() => setShowColorPicker(!showColorPicker)}
           />
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: colors.primary }]}
             onPress={handleCreateTag}
           >
-            <Text style={[styles.createButtonText, { color: '#ffffff' }]}>Create</Text>
+            <Text style={styles.createButtonText}>Create</Text>
           </TouchableOpacity>
         </View>
 
         {showColorPicker && (
-          <View style={[styles.colorPicker, { backgroundColor: colors.borderLight }]}>
-            <Text style={[styles.colorPickerTitle, { color: colors.textSecondary }]}>Select Color</Text>
+          <View
+            style={[
+              styles.colorPicker,
+              { backgroundColor: colors.borderLight },
+            ]}
+          >
+            <Text
+              style={[styles.colorPickerTitle, { color: colors.textSecondary }]}
+            >
+              Select Color
+            </Text>
             <View style={styles.colorGrid}>
-              {TAG_COLORS.map((color) => (
+              {TAG_COLORS.map(color => (
                 <TouchableOpacity
                   key={color}
                   style={[
                     styles.colorOption,
                     { backgroundColor: color },
-                    selectedColor === color && { borderColor: colors.text, borderWidth: 3 },
+                    selectedColor === color && [
+                      styles.colorOptionSelected,
+                      { borderColor: colors.text },
+                    ],
                   ]}
                   onPress={() => {
                     setSelectedColor(color);
@@ -125,21 +151,37 @@ export const TagsScreen: React.FC = () => {
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>All Tags ({tags.length})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          All Tags ({tags.length})
+        </Text>
         {isLoading ? (
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading tags...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading tags...
+          </Text>
         ) : tags.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No tags yet. Create your first tag!</Text>
+          <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+            No tags yet. Create your first tag!
+          </Text>
         ) : (
           <View style={styles.tagsContainer}>
-            {tags.map((tag) => (
-              <View key={tag.id} style={[styles.tagRow, { borderBottomColor: colors.borderLight }]}>
+            {tags.map(tag => (
+              <View
+                key={tag.id}
+                style={[
+                  styles.tagRow,
+                  { borderBottomColor: colors.borderLight },
+                ]}
+              >
                 <TagChip tag={tag} size="large" />
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDeleteTag(tag)}
                 >
-                  <Text style={[styles.deleteButtonText, { color: colors.error }]}>Delete</Text>
+                  <Text
+                    style={[styles.deleteButtonText, { color: colors.error }]}
+                  >
+                    Delete
+                  </Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -202,6 +244,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#ffffff',
   },
   colorPicker: {
     marginTop: 16,
@@ -224,6 +267,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  colorOptionSelected: {
+    borderWidth: 3,
   },
   tagsContainer: {
     marginTop: 8,
@@ -250,4 +296,3 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 });
-

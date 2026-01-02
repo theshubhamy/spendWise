@@ -11,10 +11,18 @@ import { AppSettings } from '@/types';
  */
 export const getSettings = (): AppSettings => {
   return {
-    baseCurrency: Storage.getString(STORAGE_KEYS.BASE_CURRENCY) || DEFAULT_SETTINGS.BASE_CURRENCY,
-    biometricEnabled: Storage.getBoolean(STORAGE_KEYS.BIOMETRIC_ENABLED) ?? DEFAULT_SETTINGS.BIOMETRIC_ENABLED,
-    autoLockTimeout: Storage.getNumber(STORAGE_KEYS.AUTO_LOCK_TIMEOUT) ?? DEFAULT_SETTINGS.AUTO_LOCK_TIMEOUT,
-    theme: (Storage.getString(STORAGE_KEYS.THEME) as AppSettings['theme']) || DEFAULT_SETTINGS.THEME,
+    baseCurrency:
+      Storage.getString(STORAGE_KEYS.BASE_CURRENCY) ||
+      DEFAULT_SETTINGS.BASE_CURRENCY,
+    biometricEnabled:
+      Storage.getBoolean(STORAGE_KEYS.BIOMETRIC_ENABLED) ??
+      DEFAULT_SETTINGS.BIOMETRIC_ENABLED,
+    autoLockTimeout:
+      Storage.getNumber(STORAGE_KEYS.AUTO_LOCK_TIMEOUT) ??
+      DEFAULT_SETTINGS.AUTO_LOCK_TIMEOUT,
+    theme:
+      (Storage.getString(STORAGE_KEYS.THEME) as AppSettings['theme']) ||
+      DEFAULT_SETTINGS.THEME,
   };
 };
 
@@ -26,7 +34,10 @@ export const updateSettings = (updates: Partial<AppSettings>): void => {
     Storage.setString(STORAGE_KEYS.BASE_CURRENCY, updates.baseCurrency);
   }
   if (updates.biometricEnabled !== undefined) {
-    Storage.setBoolean(STORAGE_KEYS.BIOMETRIC_ENABLED, updates.biometricEnabled);
+    Storage.setBoolean(
+      STORAGE_KEYS.BIOMETRIC_ENABLED,
+      updates.biometricEnabled,
+    );
   }
   if (updates.autoLockTimeout !== undefined) {
     Storage.setNumber(STORAGE_KEYS.AUTO_LOCK_TIMEOUT, updates.autoLockTimeout);
@@ -40,7 +51,10 @@ export const updateSettings = (updates: Partial<AppSettings>): void => {
  * Get base currency
  */
 export const getBaseCurrency = (): string => {
-  return Storage.getString(STORAGE_KEYS.BASE_CURRENCY) || DEFAULT_SETTINGS.BASE_CURRENCY;
+  return (
+    Storage.getString(STORAGE_KEYS.BASE_CURRENCY) ||
+    DEFAULT_SETTINGS.BASE_CURRENCY
+  );
 };
 
 /**
@@ -54,7 +68,10 @@ export const setBaseCurrency = (currency: string): void => {
  * Get biometric enabled status
  */
 export const getBiometricEnabled = (): boolean => {
-  return Storage.getBoolean(STORAGE_KEYS.BIOMETRIC_ENABLED) ?? DEFAULT_SETTINGS.BIOMETRIC_ENABLED;
+  return (
+    Storage.getBoolean(STORAGE_KEYS.BIOMETRIC_ENABLED) ??
+    DEFAULT_SETTINGS.BIOMETRIC_ENABLED
+  );
 };
 
 /**
@@ -68,7 +85,10 @@ export const setBiometricEnabled = (enabled: boolean): void => {
  * Get auto lock timeout
  */
 export const getAutoLockTimeout = (): number => {
-  return Storage.getNumber(STORAGE_KEYS.AUTO_LOCK_TIMEOUT) ?? DEFAULT_SETTINGS.AUTO_LOCK_TIMEOUT;
+  return (
+    Storage.getNumber(STORAGE_KEYS.AUTO_LOCK_TIMEOUT) ??
+    DEFAULT_SETTINGS.AUTO_LOCK_TIMEOUT
+  );
 };
 
 /**
@@ -91,4 +111,3 @@ export const getLastActiveTime = (): number | undefined => {
 export const setLastActiveTime = (timestamp: number): void => {
   Storage.setNumber(STORAGE_KEYS.LAST_ACTIVE_TIME, timestamp);
 };
-
