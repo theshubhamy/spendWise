@@ -2,7 +2,7 @@
  * Expenses Screen - Modern redesigned list of all expenses
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -37,7 +37,6 @@ export const ExpensesScreen: React.FC = () => {
   const { colors } = useThemeContext();
   const [expenseTags, setExpenseTags] = useState<Record<string, Tag[]>>({});
   const [showUndo, setShowUndo] = useState(false);
-  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Load tags for all expenses
@@ -74,15 +73,8 @@ export const ExpensesScreen: React.FC = () => {
             try {
               await deleteExpense(expenseId);
               await fetchExpenses();
-              // Show undo option
+              // Show undo option (UndoButton handles auto-hide internally)
               setShowUndo(true);
-              if (undoTimeoutRef.current) {
-                clearTimeout(undoTimeoutRef.current);
-              }
-              undoTimeoutRef.current = setTimeout(
-                () => setShowUndo(false),
-                5000,
-              );
             } catch {
               Alert.alert(
                 'Error',
@@ -260,6 +252,7 @@ export const ExpensesScreen: React.FC = () => {
         onUndo={handleUndo}
         autoHideDuration={5000}
         visible={showUndo}
+        onHide={() => setShowUndo(false)}
       />
     </View>
   );

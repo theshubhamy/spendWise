@@ -2,7 +2,7 @@
  * Undo Button Component - Modern redesigned snackbar-style notification
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ interface UndoButtonProps {
   onUndo?: () => Promise<boolean>;
   autoHideDuration?: number;
   visible?: boolean; // Control visibility from parent
+  onHide?: () => void; // Callback when button auto-hides
 }
 
 export const UndoButton: React.FC<UndoButtonProps> = ({
@@ -26,12 +27,19 @@ export const UndoButton: React.FC<UndoButtonProps> = ({
   onUndo,
   autoHideDuration = 5000,
   visible: visibleProp = false,
+  onHide,
 }) => {
   const { colors } = useThemeContext();
   const { undoLastAction } = useExpenseStore();
   const [visible, setVisible] = useState(false);
   const [slideAnim] = useState(new Animated.Value(100));
   const [fadeAnim] = useState(new Animated.Value(0));
+  const onHideRef = useRef(onHide);
+
+  // Store the latest onHide callback in a ref to avoid effect re-runs
+  useEffect(() => {
+    onHideRef.current = onHide;
+  }, [onHide]);
 
   // Sync internal state with prop and handle auto-hide
   useEffect(() => {
@@ -41,6 +49,8 @@ export const UndoButton: React.FC<UndoButtonProps> = ({
       // Auto-hide after duration
       const timer = setTimeout(() => {
         setVisible(false);
+        // Notify parent that button has auto-hidden
+        onHideRef.current?.();
       }, autoHideDuration);
 
       return () => clearTimeout(timer);
@@ -64,13 +74,6 @@ export const UndoButton: React.FC<UndoButtonProps> = ({
           useNativeDriver: true,
         }),
       ]).start();
-
-      // Auto-hide after duration
-      const timer = setTimeout(() => {
-        hideUndo();
-      }, autoHideDuration);
-
-      return () => clearTimeout(timer);
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -85,7 +88,7 @@ export const UndoButton: React.FC<UndoButtonProps> = ({
         }),
       ]).start();
     }
-  }, [visible, slideAnim, fadeAnim, autoHideDuration]);
+  }, [visible, slideAnim, fadeAnim]);
 
   const hideUndo = () => {
     setVisible(false);
@@ -95,6 +98,8 @@ export const UndoButton: React.FC<UndoButtonProps> = ({
     const success = onUndo ? await onUndo() : await undoLastAction();
     if (success) {
       hideUndo();
+      // Notify parent that button was hidden (via undo action)
+      onHideRef.current?.();
     }
   };
 
