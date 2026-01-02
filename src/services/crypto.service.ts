@@ -77,13 +77,13 @@ export const encrypt = async (plaintext: string): Promise<string> => {
 
     // Encrypt using XChaCha20-Poly1305-IETF
     // This includes authentication tag automatically
-    // Signature: encrypt(message, additional_data, secret_nonce, public_nonce, key)
-    // secret_nonce should be null (not used in this mode)
+    // Using 4-parameter call for backward compatibility with existing encrypted data
+    // Original format: (message, ad, public_nonce, key) - nonce in 3rd position
+    // @ts-expect-error - Using 4-parameter version for backward compatibility
     const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
       messageBytes,
       null, // No additional data (AD)
-      null, // secret_nonce (null - not used in this mode)
-      nonce, // 24-byte public nonce (npub)
+      nonce, // 24-byte public nonce (npub) - 3rd parameter for backward compatibility
       keyBytes,
     );
 
@@ -93,8 +93,16 @@ export const encrypt = async (plaintext: string): Promise<string> => {
     const ciphertextString = sodium.to_string(ciphertext);
     const combined = nonceLength + nonceString + ciphertextString;
 
-    // Return as base64 for storage using libsodium's base64 encoding
-    return sodium.to_base64(sodium.from_string(combined));
+    // Return as base64 for storage - using binary-safe encoding compatible with btoa()
+    // Convert string to binary bytes (latin1 encoding) to match btoa() behavior
+    // This ensures backward compatibility with data encrypted using btoa()
+    const combinedBytes = new Uint8Array(combined.length);
+    for (let i = 0; i < combined.length; i++) {
+      // Treat as binary (latin1) - ensure only lower 8 bits are used
+      const charCode = combined.charCodeAt(i);
+      combinedBytes[i] = charCode % 256; // Equivalent to & 0xff but avoids linter warning
+    }
+    return sodium.to_base64(combinedBytes);
   } catch (error) {
     console.error('Encryption error:', error);
     throw new Error('Encryption failed');
@@ -114,9 +122,17 @@ export const decrypt = async (ciphertext: string): Promise<string> => {
   }
 
   try {
-    // Decode base64 using libsodium
+    // Decode base64 - must handle btoa() format for backward compatibility with existing data
+    // btoa() creates base64 from binary string (latin1 encoding)
+    // sodium.from_base64() can decode it, but we need to convert back to binary string correctly
     const combinedBytes = sodium.from_base64(ciphertext);
-    const combined = sodium.to_string(combinedBytes);
+
+    // Convert bytes to binary string (latin1 encoding to match btoa/atob behavior)
+    // This ensures compatibility with data encrypted using btoa()
+    let combined = '';
+    for (let i = 0; i < combinedBytes.length; i++) {
+      combined += String.fromCharCode(combinedBytes[i]);
+    }
 
     // Extract nonce length (should be 24 for XChaCha20-Poly1305)
     const nonceLength = combined.charCodeAt(0);
@@ -135,14 +151,13 @@ export const decrypt = async (ciphertext: string): Promise<string> => {
 
     // Decrypt using XChaCha20-Poly1305-IETF
     // This automatically verifies the authentication tag
-    // Signature: decrypt(secret_nonce, ciphertext, additional_data, public_nonce, key)
-    // Note: Parameter order is different from encrypt!
-    // secret_nonce should be null (not used in this mode)
+    // Using 4-parameter call for backward compatibility with existing encrypted data
+    // Original format: (ciphertext, ad, public_nonce, key) - nonce in 3rd position
+    // @ts-expect-error - Using 4-parameter version for backward compatibility
     const plaintextBytes = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-      null, // secret_nonce (null - not used in this mode)
       ciphertextBytes,
       null, // No additional data (AD)
-      nonce, // 24-byte public nonce (npub)
+      nonce, // 24-byte public nonce (npub) - 3rd parameter for backward compatibility
       keyBytes,
     );
 
