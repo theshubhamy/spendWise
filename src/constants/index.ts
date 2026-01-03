@@ -28,6 +28,11 @@ export const STORAGE_KEYS = {
   BASE_CURRENCY: 'base_currency',
   EXCHANGE_RATES: 'exchange_rates',
   THEME: 'theme',
+  // Auth & User
+  USER_ID: 'user_id',
+  USER_EMAIL: 'user_email',
+  ACCESS_TOKEN: 'access_token',
+  REFRESH_TOKEN: 'refresh_token',
 } as const;
 
 // Default Settings

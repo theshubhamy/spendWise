@@ -25,25 +25,28 @@ class AuthService {
    */
   async initialize(): Promise<void> {
     // Configure Google Sign-In
-    // Get the web client ID from google-services.json or environment
-    // For now, using the Android client ID - you may need to create a Web Client ID
+    // Using the Web Client ID from Firebase (google-services.json)
+    // This is the OAuth client with client_type 3 (Web client)
     GoogleSignin.configure({
-      webClientId: '725873219178-vuipdaael5avk4fnlq6420knrfpe7uhh.apps.googleusercontent.com', // Your Android Client ID
+      webClientId:
+        '140756642274-j59lu0cjhjnur65ncd2kmuthem9lchgl.apps.googleusercontent.com', // Firebase Web Client ID
       offlineAccess: true,
     });
 
     // Listen for auth state changes
-    auth().onAuthStateChanged(async (firebaseUser: FirebaseAuthTypes.User | null) => {
-      if (firebaseUser) {
-        await this.loadUserFromFirebaseUser(firebaseUser);
-      } else {
-        this.currentUser = null;
-        Storage.delete(STORAGE_KEYS.USER_ID);
-        Storage.delete(STORAGE_KEYS.USER_EMAIL);
-        Storage.delete(STORAGE_KEYS.ACCESS_TOKEN);
-        Storage.delete(STORAGE_KEYS.REFRESH_TOKEN);
-      }
-    });
+    auth().onAuthStateChanged(
+      async (firebaseUser: FirebaseAuthTypes.User | null) => {
+        if (firebaseUser) {
+          await this.loadUserFromFirebaseUser(firebaseUser);
+        } else {
+          this.currentUser = null;
+          Storage.delete(STORAGE_KEYS.USER_ID);
+          Storage.delete(STORAGE_KEYS.USER_EMAIL);
+          Storage.delete(STORAGE_KEYS.ACCESS_TOKEN);
+          Storage.delete(STORAGE_KEYS.REFRESH_TOKEN);
+        }
+      },
+    );
 
     // Check for existing session
     const firebaseUser = auth().currentUser;
@@ -59,17 +62,31 @@ class AuthService {
     try {
       // Check if Google Play Services are available (Android)
       if (Platform.OS === 'android') {
-        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        await GoogleSignin.hasPlayServices({
+          showPlayServicesUpdateDialog: true,
+        });
       }
 
       // Get the user's ID token
-      const { idToken } = await GoogleSignin.signIn();
+      const signInResult = await GoogleSignin.signIn();
+
+      // Check if sign-in was successful
+      if (signInResult.type !== 'success') {
+        throw new Error('Google sign-in was cancelled');
+      }
+
+      const idToken = signInResult.data.idToken;
+      if (!idToken) {
+        throw new Error('No ID token received from Google');
+      }
 
       // Create a Google credential with the token
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
 
       // Sign-in the user with the credential
-      const userCredential = await auth().signInWithCredential(googleCredential);
+      const userCredential = await auth().signInWithCredential(
+        googleCredential,
+      );
 
       if (!userCredential.user) {
         throw new Error('Failed to sign in with Google');
@@ -80,8 +97,16 @@ class AuthService {
     } catch (error: any) {
       console.error('Google sign-in error:', error);
 
+      // Handle DEVELOPER_ERROR - SHA-1 fingerprint not registered
+      if (error.code === 'auth/developer-error') {
+        throw new Error(
+          'SHA-1 fingerprint not registered. Please register the SHA-1 fingerprint in the Firebase console.',
+        );
+      }
       if (error.code === 'auth/account-exists-with-different-credential') {
-        throw new Error('An account already exists with a different sign-in method');
+        throw new Error(
+          'An account already exists with a different sign-in method',
+        );
       } else if (error.code === 'auth/invalid-credential') {
         throw new Error('Invalid credential. Please try again.');
       } else if (error.code === 'auth/network-request-failed') {
@@ -98,8 +123,11 @@ class AuthService {
   async signOut(): Promise<void> {
     try {
       // Sign out from Google
-      if (await GoogleSignin.isSignedIn()) {
+      try {
         await GoogleSignin.signOut();
+      } catch (error) {
+        // Ignore if not signed in
+        console.log('Google sign out:', error);
       }
 
       // Sign out from Firebase
@@ -150,7 +178,9 @@ class AuthService {
   /**
    * Load user from Firebase user object
    */
-  private async loadUserFromFirebaseUser(firebaseUser: FirebaseAuthTypes.User): Promise<void> {
+  private async loadUserFromFirebaseUser(
+    firebaseUser: FirebaseAuthTypes.User,
+  ): Promise<void> {
     const token = await firebaseUser.getIdToken();
 
     this.currentUser = {
@@ -173,4 +203,3 @@ class AuthService {
 }
 
 export const authService = new AuthService();
-
