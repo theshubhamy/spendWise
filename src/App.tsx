@@ -23,11 +23,14 @@ import {
   isAppLocked,
 } from '@/services/biometric.service';
 import { setLastActiveTime } from '@/services/settings.service';
+import { authService } from '@/services/auth.service';
+import { AuthScreen } from '@/screens/AuthScreen';
 
 function AppContent() {
   const { colors, isDark } = useThemeContext();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const appState = useRef(AppState.currentState);
 
@@ -45,6 +48,13 @@ function AppContent() {
 
         // Initialize notifications
         await initNotifications();
+
+        // Initialize authentication
+        await authService.initialize();
+
+        // Check authentication status
+        const authenticated = authService.isAuthenticated();
+        setIsAuthenticated(authenticated);
 
         // Generate recurring expenses
         await generateRecurringExpenses();
@@ -141,6 +151,19 @@ function AppContent() {
 
   if (error) {
     console.warn('App initialization warning:', error);
+  }
+
+  // Show auth screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+        <AuthScreen />
+      </SafeAreaProvider>
+    );
   }
 
   // Show lock screen if app is locked

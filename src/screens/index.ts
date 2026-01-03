@@ -16,3 +16,5 @@ export { GroupDetailScreen } from './GroupDetailScreen';
 export { RecurringExpensesScreen } from './RecurringExpensesScreen';
 export { CreateRecurringScreen } from './CreateRecurringScreen';
 export { RemindersScreen } from './RemindersScreen';
+export { AuthScreen } from './AuthScreen';
+export { SettleUpScreen } from './SettleUpScreen';
