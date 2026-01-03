@@ -19,13 +19,11 @@ import {
   Button,
   Picker,
   DatePicker,
-  TagSelector,
   ScreenHeader,
 } from '@/components';
 import { EXPENSE_CATEGORIES } from '@/constants';
 import { useExpenseStore } from '@/store';
 import { useGroupStore } from '@/store/groupStore';
-import { setTagsForExpense } from '@/services/tag.service';
 import * as expenseService from '@/services/expense.service';
 import {
   splitExpenseEqually,
@@ -59,7 +57,6 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [paidByMemberId, setPaidByMemberId] = useState<string | null>(null);
   const [splitType, setSplitType] = useState<SplitType>('equal');
@@ -238,11 +235,6 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
         }
       }
 
-      // Add tags to expense
-      if (selectedTagIds.length > 0) {
-        await setTagsForExpense(newExpense.id, selectedTagIds);
-      }
-
       navigation.goBack();
     } catch (error) {
       console.error('Error adding expense:', error);
@@ -330,12 +322,6 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
             value={date}
             onValueChange={setDate}
             error={errors.date}
-          />
-
-          <TagSelector
-            label="Tags (Optional)"
-            selectedTagIds={selectedTagIds}
-            onSelectionChange={setSelectedTagIds}
           />
 
           <Picker

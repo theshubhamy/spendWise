@@ -11,7 +11,6 @@ export { SettingsScreen } from './SettingsScreen';
 export { AddExpenseScreen } from './AddExpenseScreen';
 export { EditExpenseScreen } from './EditExpenseScreen';
 export { LockScreen } from './LockScreen';
-export { TagsScreen } from './TagsScreen';
 export { CreateGroupScreen } from './CreateGroupScreen';
 export { GroupDetailScreen } from './GroupDetailScreen';
 export { RecurringExpensesScreen } from './RecurringExpensesScreen';

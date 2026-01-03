@@ -240,20 +240,6 @@ export const SettingsScreen: React.FC = () => {
             styles.settingItem,
             { borderBottomColor: colors.borderLight },
           ]}
-          onPress={() => navigation.navigate('Tags')}
-        >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>
-            Manage Tags
-          </Text>
-          <Text
-            style={[styles.settingDescription, { color: colors.textSecondary }]}
-          >
-            Create and organize expense tags
-          </Text>
-          <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-            ›
-          </Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[

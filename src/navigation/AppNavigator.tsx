@@ -13,7 +13,6 @@ import { ReportsScreen } from '@/screens/ReportsScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { AddExpenseScreen } from '@/screens/AddExpenseScreen';
 import { EditExpenseScreen } from '@/screens/EditExpenseScreen';
-import { TagsScreen } from '@/screens/TagsScreen';
 import { CreateGroupScreen } from '@/screens/CreateGroupScreen';
 import { GroupDetailScreen } from '@/screens/GroupDetailScreen';
 import { RecurringExpensesScreen } from '@/screens/RecurringExpensesScreen';
@@ -231,17 +230,7 @@ export const AppNavigator: React.FC = () => {
             },
           }}
         />
-        <Stack.Screen
-          name="Tags"
-          component={TagsScreen}
-          options={{
-            presentation: 'card',
-            headerShown: false,
-            contentStyle: {
-              paddingBottom: insets.bottom,
-            },
-          }}
-        />
+
         <Stack.Screen
           name="CreateGroup"
           component={CreateGroupScreen}

@@ -344,40 +344,6 @@ export const ProfileScreen: React.FC = () => {
             styles.settingItem,
             { borderBottomColor: colors.borderLight },
           ]}
-          onPress={() => navigation.navigate('Tags')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.settingLeft}>
-            <View
-              style={[
-                styles.settingIconContainer,
-                { backgroundColor: colors.primary + '15' },
-              ]}
-            >
-              <Icon name="pricetag" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>
-                Manage Tags
-              </Text>
-              <Text
-                style={[
-                  styles.settingDescription,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Create and organize expense tags
-              </Text>
-            </View>
-          </View>
-          <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.settingItem,
-            { borderBottomColor: colors.borderLight },
-          ]}
           onPress={() => navigation.navigate('RecurringExpenses')}
           activeOpacity={0.7}
         >

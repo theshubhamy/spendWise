@@ -17,12 +17,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useExpenseStore } from '@/store';
 import { useGroupStore } from '@/store/groupStore';
 import { getTagsForExpense } from '@/services/tag.service';
-import { TagChip, Card, ScreenHeader } from '@/components';
+import { Card, ScreenHeader } from '@/components';
 import { format } from 'date-fns';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { undoLastAction } from '@/services/undo.service';
 import { useThemeContext } from '@/context/ThemeContext';
-import { Tag } from '@/types';
 import Icon from '@react-native-vector-icons/ionicons';
 import { UndoButton } from '@/components/UndoButton';
 
@@ -35,25 +34,10 @@ export const ExpensesScreen: React.FC = () => {
     useExpenseStore();
   const { groups } = useGroupStore();
   const { colors } = useThemeContext();
-  const [expenseTags, setExpenseTags] = useState<Record<string, Tag[]>>({});
   const [showUndo, setShowUndo] = useState(false);
   const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [filter, setFilter] = useState<'all' | 'personal' | 'group'>('all');
 
-  useEffect(() => {
-    // Load tags for all expenses
-    const loadTags = async () => {
-      const tagsMap: Record<string, Tag[]> = {};
-      for (const expense of expenses) {
-        const tags = await getTagsForExpense(expense.id);
-        tagsMap[expense.id] = tags;
-      }
-      setExpenseTags(tagsMap);
-    };
-    if (expenses.length > 0) {
-      loadTags();
-    }
-  }, [expenses]);
 
   const handleEdit = (expenseId: string) => {
     navigation.navigate('EditExpense', { expenseId });
@@ -317,14 +301,6 @@ export const ExpensesScreen: React.FC = () => {
                   >
                     {expense.description || 'No description'}
                   </Text>
-                  {expenseTags[expense.id] &&
-                    expenseTags[expense.id].length > 0 && (
-                      <View style={styles.tagsContainer}>
-                        {expenseTags[expense.id].map(tag => (
-                          <TagChip key={tag.id} tag={tag} size="small" />
-                        ))}
-                      </View>
-                    )}
                   <Text
                     style={[styles.expenseDate, { color: colors.textTertiary }]}
                   >
@@ -461,11 +437,6 @@ const styles = StyleSheet.create({
   },
   expenseDescription: {
     fontSize: 14,
-    marginBottom: 6,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     marginBottom: 6,
   },
   expenseDate: {

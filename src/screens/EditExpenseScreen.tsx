@@ -19,12 +19,10 @@ import {
   Button,
   Picker,
   DatePicker,
-  TagSelector,
   ScreenHeader,
 } from '@/components';
 import { EXPENSE_CATEGORIES, DEFAULT_SETTINGS } from '@/constants';
 import { useExpenseStore } from '@/store';
-import { getTagsForExpense, setTagsForExpense } from '@/services/tag.service';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -54,7 +52,6 @@ export const EditExpenseScreen: React.FC<EditExpenseScreenProps> = ({
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -67,9 +64,6 @@ export const EditExpenseScreen: React.FC<EditExpenseScreenProps> = ({
         setDescription(expense.description || '');
         setDate(expense.date);
 
-        // Load tags for expense
-        const tags = await getTagsForExpense(expense.id);
-        setSelectedTagIds(tags.map(tag => tag.id));
       }
     };
     loadExpenseData();
@@ -129,9 +123,6 @@ export const EditExpenseScreen: React.FC<EditExpenseScreenProps> = ({
         description: description || undefined,
         date,
       });
-
-      // Update tags
-      await setTagsForExpense(expenseId, selectedTagIds);
 
       navigation.goBack();
     } catch (error) {
@@ -268,12 +259,6 @@ export const EditExpenseScreen: React.FC<EditExpenseScreenProps> = ({
             value={date}
             onValueChange={setDate}
             error={errors.date}
-          />
-
-          <TagSelector
-            label="Tags (Optional)"
-            selectedTagIds={selectedTagIds}
-            onSelectionChange={setSelectedTagIds}
           />
 
           {errors.submit && (

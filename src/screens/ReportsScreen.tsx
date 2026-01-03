@@ -8,12 +8,10 @@ import { useExpenseStore } from '@/store';
 import { useThemeContext } from '@/context/ThemeContext';
 import {
   getMonthlyTrends,
-  getTagAnalysis,
   getCategoryAnalysis,
   getHighestExpenses,
   getAverageDailySpending,
   MonthlyTrend,
-  TagAnalysis,
 } from '@/services/analytics.service';
 import { format } from 'date-fns';
 import { ScreenHeader, Card } from '@/components';
@@ -25,7 +23,6 @@ export const ReportsScreen: React.FC = () => {
   const { expenses } = useExpenseStore();
   const { colors } = useThemeContext();
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
-  const [tagAnalysis, setTagAnalysis] = useState<TagAnalysis[]>([]);
   const [_loading, setLoading] = useState(true);
   const currencySymbol = getCurrencySymbol(getBaseCurrency());
 
@@ -36,8 +33,6 @@ export const ReportsScreen: React.FC = () => {
         const trends = await getMonthlyTrends(expenses, 6);
         setMonthlyTrends(trends);
 
-        const tags = await getTagAnalysis(expenses);
-        setTagAnalysis(tags);
       } catch (error) {
         console.error('Error loading analytics:', error);
       } finally {
@@ -188,41 +183,6 @@ export const ReportsScreen: React.FC = () => {
                   {item.percentage.toFixed(1)}%
                 </Text>
               </View>
-            </View>
-          ))}
-        </Card>
-      )}
-
-      {tagAnalysis.length > 0 && (
-        <Card variant="elevated" style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Icon name="pricetag" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Tag-Based Analysis
-            </Text>
-          </View>
-          {tagAnalysis.map(tag => (
-            <View
-              key={tag.tagId}
-              style={[
-                styles.tagItem,
-                { borderBottomColor: colors.borderLight },
-              ]}
-            >
-              <View style={[styles.tagColor, { backgroundColor: tag.color }]} />
-              <View style={styles.tagInfo}>
-                <Text style={[styles.tagName, { color: colors.text }]}>
-                  {tag.tagName}
-                </Text>
-                <Text
-                  style={[styles.tagCount, { color: colors.textSecondary }]}
-                >
-                  {tag.count} expenses
-                </Text>
-              </View>
-              <Text style={[styles.tagAmount, { color: colors.text }]}>
-                {currencySymbol}{tag.total.toFixed(2)}
-              </Text>
             </View>
           ))}
         </Card>
@@ -428,33 +388,6 @@ const styles = StyleSheet.create({
   categoryPercentage: {
     fontSize: 12,
     marginTop: 2,
-  },
-  tagItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  tagColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  tagInfo: {
-    flex: 1,
-  },
-  tagName: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  tagCount: {
-    fontSize: 12,
-  },
-  tagAmount: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   expenseItem: {
     flexDirection: 'row',
