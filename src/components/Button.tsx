@@ -18,7 +18,7 @@ interface ButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'small' | 'medium' | 'large';
+  size?: 'xsmall' | 'small' | 'medium' | 'large';
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -45,6 +45,12 @@ export const Button: React.FC<ButtonProps> = ({
   const isDisabled = disabled || loading;
 
   const sizeStyles = {
+    xsmall: {
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      minHeight: 24,
+      fontSize: 12,
+    },
     small: {
       paddingVertical: 8,
       paddingHorizontal: 16,
@@ -137,7 +143,11 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'outline' || variant === 'ghost' ? colors.primary : '#ffffff'}
+          color={
+            variant === 'outline' || variant === 'ghost'
+              ? colors.primary
+              : '#ffffff'
+          }
         />
       ) : (
         <View style={styles.content}>
@@ -188,4 +198,3 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
-

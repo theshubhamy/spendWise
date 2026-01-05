@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { ExpensesScreen } from '@/screens/ExpensesScreen';
 import { GroupsScreen } from '@/screens/GroupsScreen';
-import { ReportsScreen } from '@/screens/ReportsScreen';
+import { ActivityScreen } from '@/screens/ActivityScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { AddExpenseScreen } from '@/screens/AddExpenseScreen';
 import { EditExpenseScreen } from '@/screens/EditExpenseScreen';
@@ -15,6 +15,7 @@ import { RecurringExpensesScreen } from '@/screens/RecurringExpensesScreen';
 import { CreateRecurringScreen } from '@/screens/CreateRecurringScreen';
 import { RemindersScreen } from '@/screens/RemindersScreen';
 import { SettleUpScreen } from '@/screens/SettleUpScreen';
+import { InviteScreen } from '@/screens/InviteScreen';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   RecurringExpenses: undefined;
   Reminders: undefined;
   SettleUp: { groupId: string };
+  Invite: { groupId: string };
 };
 
 // Bottom Tab Navigator Types
@@ -37,7 +39,7 @@ export type MainTabParamList = {
   Home: undefined;
   Expenses: undefined;
   Groups: undefined;
-  Reports: undefined;
+  Activity: undefined;
   Profile: undefined;
 };
 
@@ -83,7 +85,7 @@ const GroupsIcon = ({
     color={color}
   />
 );
-const ReportsIcon = ({
+const ActivityIcon = ({
   focused,
   color,
   size,
@@ -165,11 +167,11 @@ const MainTabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Reports"
-        component={ReportsScreen}
+        name="Activity"
+        component={ActivityScreen}
         options={{
-          tabBarLabel: 'Reports',
-          tabBarIcon: ReportsIcon,
+          tabBarLabel: 'Activity',
+          tabBarIcon: ActivityIcon,
         }}
       />
       <Tab.Screen
@@ -286,6 +288,17 @@ export const AppNavigator: React.FC = () => {
           component={SettleUpScreen}
           options={{
             presentation: 'card',
+            headerShown: false,
+            contentStyle: {
+              paddingBottom: insets.bottom,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="Invite"
+          component={InviteScreen}
+          options={{
+            presentation: 'modal',
             headerShown: false,
             contentStyle: {
               paddingBottom: insets.bottom,
