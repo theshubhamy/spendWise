@@ -82,7 +82,9 @@ export const Picker: React.FC<PickerProps> = ({
           <View
             style={[
               styles.pickerContainer,
-              isFocused ? styles.pickerContainerFocused : styles.pickerContainerUnfocused,
+              isFocused
+                ? styles.pickerContainerFocused
+                : styles.pickerContainerUnfocused,
               {
                 backgroundColor: colors.inputBackground,
                 borderColor,
@@ -219,6 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     minHeight: 52,
+    borderWidth: 1.5,
   },
   pickerContainerFocused: {
     borderWidth: 2,

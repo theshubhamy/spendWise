@@ -80,10 +80,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         <View
           style={[
             styles.inputContainer,
-            isFocused ? styles.inputContainerFocused : styles.inputContainerUnfocused,
+            isFocused ? styles.inputContainer : styles.inputContainer,
             {
               backgroundColor: colors.inputBackground,
-              borderColor,
+              borderColor: borderColor,
             },
             error && styles.inputError,
           ]}
@@ -101,17 +101,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             placeholderTextColor={colors.placeholder}
             editable={false}
           />
-          <Icon
-            name="chevron-down"
-            size={20}
-            color={colors.textSecondary}
-          />
+          <Icon name="chevron-down" size={20} color={colors.textSecondary} />
         </View>
       </TouchableOpacity>
       {error && (
-        <Text style={[styles.errorText, { color: colors.error }]}>
-          {error}
-        </Text>
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
       )}
 
       {showPicker && (
@@ -145,6 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     minHeight: 52,
+    borderWidth: 1.5,
   },
   icon: {
     marginRight: 12,
@@ -163,4 +158,3 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
-

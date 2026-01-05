@@ -1,10 +1,8 @@
 /**
- * Add Expense Screen - Modern, simplified design for adding expenses
- * Personal expenses: Offline-first (SQLite)
- * Group expenses: Firebase (real-time)
+ * Add Expense Screen - Modern redesigned modal for adding new expenses
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -16,30 +14,29 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Input,
-  Button,
-  Picker,
-  DatePicker,
-  ScreenHeader,
-  Card,
-} from '@/components';
+import { Input, Button, Picker, DatePicker, ScreenHeader } from '@/components';
 import { EXPENSE_CATEGORIES } from '@/constants/categories';
-import { CURRENCIES, getCurrencyDisplayName } from '@/constants/currencies';
 import { useExpenseStore } from '@/store';
 import { useGroupStore } from '@/store/groupStore';
 import * as expenseService from '@/services/expense.service';
 import { groupExpenseService } from '@/services/groupExpense.service';
-import { getGroupMembers } from '@/services/group.service';
+import {
+  splitExpenseEqually,
+  splitExpenseByPercentage,
+  splitExpenseByAmount,
+  getGroupMembers,
+} from '@/services/group.service';
 import { useThemeContext } from '@/context/ThemeContext';
-import { SplitType, GroupMember } from '@/types';
+import { SplitType, GroupMember, Expense } from '@/types';
 import { getBaseCurrency } from '@/services/settings.service';
 import Icon from '@react-native-vector-icons/ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 
 interface AddExpenseScreenProps {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AddExpense'>;
+  route: RouteProp<RootStackParamList, 'AddExpense'>;
 }
 
 export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
@@ -51,7 +48,7 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
   const { groups, fetchGroups } = useGroupStore();
 
   const [amount, setAmount] = useState('');
-  const [currencyCode, setCurrencyCode] = useState(getBaseCurrency());
+  const [currencyCode, setCurrencyCode] = useState(getBaseCurrency()); // Use default currency from settings
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -71,7 +68,7 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
 
   // Refresh currency and groups when screen is focused
   useFocusEffect(
-    useCallback(() => {
+    React.useCallback(() => {
       setCurrencyCode(getBaseCurrency());
       fetchGroups();
     }, [fetchGroups]),
@@ -84,14 +81,16 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
         try {
           const members = await getGroupMembers(selectedGroupId);
           setGroupMembers(members);
-          // Set first member as default payer if not set
+
+          // Set first member as default payer if not set (using functional update to avoid dependency)
           setPaidByMemberId(prev => {
             if (!prev && members.length > 0) {
               return members[0].id;
             }
             return prev;
           });
-          // Select all members by default for equal split
+
+          // Select all members by default for equal split (using functional update to avoid dependency)
           setSelectedMemberIds(prev => {
             if (prev.length === 0 && members.length > 0) {
               return members.map(m => m.id);
@@ -127,34 +126,6 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
       newErrors.date = 'Please select a date';
     }
 
-    // Group expense validations
-    if (selectedGroupId) {
-      if (!paidByMemberId) {
-        newErrors.paidBy = 'Please select who paid';
-      }
-      if (selectedMemberIds.length === 0) {
-        newErrors.members = 'Please select at least one member';
-      }
-      if (splitType === 'percentage') {
-        const total = selectedMemberIds.reduce(
-          (sum, id) => sum + (percentageSplits[id] || 0),
-          0,
-        );
-        if (Math.abs(total - 100) > 0.01) {
-          newErrors.split = `Total must equal 100% (currently ${total.toFixed(2)}%)`;
-        }
-      }
-      if (splitType === 'custom') {
-        const total = selectedMemberIds.reduce(
-          (sum, id) => sum + (customAmountSplits[id] || 0),
-          0,
-        );
-        if (Math.abs(total - parseFloat(amount)) > 0.01) {
-          newErrors.split = `Total must equal ${parseFloat(amount).toFixed(2)}`;
-        }
-      }
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -167,68 +138,126 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
     setLoading(true);
     try {
       const amountNum = parseFloat(amount);
-      const expenseData = {
-        amount: amountNum,
-        currencyCode,
-        category,
-        description: description || undefined,
-        date,
-      };
 
+      // Validate split configuration if group is selected
       if (selectedGroupId) {
-        // Group expense: Store in Firebase
-        const newExpense = await groupExpenseService.createGroupExpense(
+        if (!paidByMemberId) {
+          setErrors({ split: 'Please select who paid for this expense' });
+          setLoading(false);
+          return;
+        }
+        if (selectedMemberIds.length === 0) {
+          setErrors({
+            split: 'Please select at least one member to split with',
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Validate percentage splits
+        if (splitType === 'percentage') {
+          const totalPercentage = selectedMemberIds.reduce(
+            (sum, id) => sum + (percentageSplits[id] || 0),
+            0,
+          );
+          if (Math.abs(totalPercentage - 100) > 0.01) {
+            setErrors({
+              split: `Total percentage must equal 100% (currently ${totalPercentage.toFixed(
+                2,
+              )}%)`,
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Validate custom amount splits
+        if (splitType === 'custom') {
+          const totalAmount = selectedMemberIds.reduce(
+            (sum, id) => sum + (customAmountSplits[id] || 0),
+            0,
+          );
+          if (Math.abs(totalAmount - amountNum) > 0.01) {
+            setErrors({
+              split: `Total amount must equal expense amount (${amountNum.toFixed(
+                2,
+              )})`,
+            });
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      let newExpense: Expense;
+
+      // Create expense based on whether it's a group expense or personal expense
+      if (selectedGroupId) {
+        // Create group expense
+        newExpense = await groupExpenseService.createGroupExpense(
           selectedGroupId,
           {
-            ...expenseData,
+            amount: amountNum,
+            currencyCode,
+            category,
+            description: description || undefined,
+            date,
             groupId: selectedGroupId,
-            paidByMemberId: paidByMemberId!,
+            paidByMemberId: paidByMemberId || undefined,
           },
         );
 
-        // Create splits
-        if (splitType === 'equal') {
-          const amountPerMember = amountNum / selectedMemberIds.length;
-          await groupExpenseService.createExpenseSplits(
-            selectedGroupId,
-            newExpense.id,
-            selectedMemberIds.map(id => ({
-              memberId: id,
-              amount: amountPerMember,
-            })),
-          );
-        } else if (splitType === 'percentage') {
-          await groupExpenseService.createExpenseSplits(
-            selectedGroupId,
-            newExpense.id,
-            selectedMemberIds.map(id => ({
-              memberId: id,
-              amount: (amountNum * (percentageSplits[id] || 0)) / 100,
-              percentage: percentageSplits[id] || 0,
-            })),
-          );
-        } else if (splitType === 'custom') {
-          await groupExpenseService.createExpenseSplits(
-            selectedGroupId,
-            newExpense.id,
-            selectedMemberIds.map(id => ({
-              memberId: id,
-              amount: customAmountSplits[id] || 0,
-            })),
-          );
+        // Split the expense based on selected split type
+        if (selectedMemberIds.length > 0) {
+          if (splitType === 'equal') {
+            await splitExpenseEqually(
+              newExpense.id,
+              selectedMemberIds,
+              newExpense.amount,
+            );
+          } else if (splitType === 'percentage') {
+            await splitExpenseByPercentage(
+              newExpense.id,
+              selectedMemberIds.map(id => ({
+                memberId: id,
+                percentage: percentageSplits[id] || 0,
+              })),
+              newExpense.amount,
+            );
+          } else if (splitType === 'custom') {
+            await splitExpenseByAmount(
+              newExpense.id,
+              selectedMemberIds.map(id => ({
+                memberId: id,
+                amount: customAmountSplits[id] || 0,
+              })),
+            );
+          }
         }
       } else {
-        // Personal expense: Store locally (offline-first)
-        await expenseService.createExpense(expenseData);
-        await addExpense(expenseData);
+        // Create personal expense
+        newExpense = await expenseService.createExpense({
+          amount: amountNum,
+          currencyCode,
+          category,
+          description: description || undefined,
+          date,
+        });
+
+        // Add to store
+        await addExpense({
+          amount: amountNum,
+          currencyCode,
+          category,
+          description: description || undefined,
+          date,
+        });
       }
 
       navigation.goBack();
     } catch (error) {
       console.error('Error adding expense:', error);
-      setErrors({
-        submit: 'Failed to add expense. Please try again.',
-      });
+      setErrors({ submit: 'Failed to add expense. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -239,35 +268,19 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
     value: cat,
   }));
 
-  const currencyOptions = CURRENCIES.map(currency => ({
-    label: getCurrencyDisplayName(currency.code),
-    value: currency.code,
-  }));
-
-  const toggleExpenseType = (isGroup: boolean) => {
-    if (isGroup && groups.length === 0) {
-      setErrors({ submit: 'No groups available. Create a group first.' });
-      return;
-    }
-    setSelectedGroupId(isGroup ? (selectedGroupId || groups[0]?.id || null) : null);
-    setErrors({});
-  };
-
-  const toggleMemberSelection = (memberId: string) => {
-    setSelectedMemberIds(prev => {
-      if (prev.includes(memberId)) {
-        return prev.filter(id => id !== memberId);
-      }
-      return [...prev, memberId];
-    });
-  };
-
-  const isPersonalExpense = !selectedGroupId;
+  const groupOptions = [
+    { label: 'Personal (No Split)', value: '' },
+    ...groups.map(group => ({
+      label: group.name,
+      value: group.id,
+    })),
+  ];
 
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScreenHeader
         title="Add Expense"
@@ -284,130 +297,22 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Expense Type Toggle */}
-        <Card variant="elevated" style={styles.typeCard}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>
-            Expense Type
-          </Text>
-          <View style={styles.typeToggleContainer}>
-            <TouchableOpacity
-              style={[
-                styles.typeToggle,
-                isPersonalExpense && [
-                  styles.typeToggleActive,
-                  { backgroundColor: colors.primary },
-                ],
-                !isPersonalExpense && [
-                  styles.typeToggleInactive,
-                  { borderColor: colors.border },
-                ],
-              ]}
-              onPress={() => toggleExpenseType(false)}
-            >
+        <View style={styles.formSection}>
+          <Input
+            label={`Amount (${currencyCode})`}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0.00"
+            keyboardType="decimal-pad"
+            error={errors.amount}
+            leftIcon={
               <Icon
-                name="person-outline"
+                name="cash-outline"
                 size={20}
-                color={isPersonalExpense ? '#ffffff' : colors.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text
-                style={[
-                  styles.typeToggleText,
-                  {
-                    color: isPersonalExpense
-                      ? '#ffffff'
-                      : colors.textSecondary,
-                  },
-                ]}
-              >
-                Personal
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.typeToggle,
-                !isPersonalExpense && [
-                  styles.typeToggleActive,
-                  { backgroundColor: colors.primary },
-                ],
-                isPersonalExpense && [
-                  styles.typeToggleInactive,
-                  { borderColor: colors.border },
-                ],
-              ]}
-              onPress={() => toggleExpenseType(true)}
-            >
-              <Icon
-                name="people-outline"
-                size={20}
-                color={!isPersonalExpense ? '#ffffff' : colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.typeToggleText,
-                  {
-                    color: !isPersonalExpense
-                      ? '#ffffff'
-                      : colors.textSecondary,
-                  },
-                ]}
-              >
-                Group
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {!isPersonalExpense && (
-            <View style={styles.groupSelector}>
-              <Picker
-                label="Select Group"
-                selectedValue={selectedGroupId || ''}
-                onValueChange={value => {
-                  setSelectedGroupId(value || null);
-                  setErrors({});
-                }}
-                items={groups.map(group => ({
-                  label: group.name,
-                  value: group.id,
-                }))}
-              />
-            </View>
-          )}
-        </Card>
-
-        {/* Basic Expense Details */}
-        <Card variant="elevated" style={styles.detailsCard}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>
-            Expense Details
-          </Text>
-
-          <View style={styles.amountRow}>
-            <View style={styles.amountInput}>
-              <Input
-                label="Amount"
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                error={errors.amount}
-                leftIcon={
-                  <Icon
-                    name="cash-outline"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                }
-              />
-            </View>
-            <View style={styles.currencyInput}>
-              <Picker
-                label="Currency"
-                selectedValue={currencyCode}
-                onValueChange={setCurrencyCode}
-                items={currencyOptions}
-              />
-            </View>
-          </View>
+            }
+          />
 
           <Picker
             label="Category"
@@ -437,233 +342,281 @@ export const AddExpenseScreen: React.FC<AddExpenseScreenProps> = ({
             onValueChange={setDate}
             error={errors.date}
           />
-        </Card>
 
-        {/* Group Expense Details */}
-        {selectedGroupId && groupMembers.length > 0 && (
-          <Card variant="elevated" style={styles.groupCard}>
-            <View style={styles.groupHeader}>
-              <Icon name="people" size={20} color={colors.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                Group Details
-              </Text>
-            </View>
+          <Picker
+            label="Split with Group (Optional)"
+            selectedValue={selectedGroupId || ''}
+            onValueChange={value => {
+              setSelectedGroupId(value || null);
+              setErrors({}); // Clear errors when group changes
+            }}
+            items={groupOptions}
+            placeholder="Keep as personal expense"
+          />
 
-            <Picker
-              label="Paid By"
-              selectedValue={paidByMemberId || ''}
-              onValueChange={value => setPaidByMemberId(value || null)}
-              items={groupMembers.map(member => ({
-                label: member.name,
-                value: member.id,
-              }))}
-              error={errors.paidBy}
-            />
+          {selectedGroupId && groupMembers.length > 0 && (
+            <>
+              <Picker
+                label="Paid By"
+                selectedValue={paidByMemberId || ''}
+                onValueChange={value => setPaidByMemberId(value || null)}
+                items={groupMembers.map(member => ({
+                  label: member.name,
+                  value: member.id,
+                }))}
+                error={errors.split}
+              />
 
-            <View style={styles.splitTypeContainer}>
-              <Text style={[styles.splitTypeLabel, { color: colors.text }]}>
-                Split Type
-              </Text>
-              <View style={styles.splitTypeButtons}>
-                {(['equal', 'percentage', 'custom'] as SplitType[]).map(
-                  type => (
+              <Picker
+                label="Split Type"
+                selectedValue={splitType}
+                onValueChange={value => {
+                  setSplitType(value as SplitType);
+                  // Reset splits when type changes
+                  setPercentageSplits({});
+                  setCustomAmountSplits({});
+                }}
+                items={[
+                  { label: 'Equal', value: 'equal' },
+                  { label: 'Percentage', value: 'percentage' },
+                  { label: 'Custom Amount', value: 'custom' },
+                ]}
+              />
+
+              <View style={styles.memberSelectionContainer}>
+                <Text
+                  style={[styles.memberSelectionLabel, { color: colors.text }]}
+                >
+                  Select Members to Split With
+                </Text>
+                {groupMembers.map(member => (
+                  <View key={member.id} style={styles.memberRow}>
                     <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.splitTypeButton,
-                        splitType === type && [
-                          styles.splitTypeButtonActive,
-                          { backgroundColor: colors.primary },
-                        ],
-                        splitType !== type && [
-                          styles.splitTypeButtonInactive,
-                          { borderColor: colors.border },
-                        ],
-                      ]}
+                      style={styles.memberCheckbox}
                       onPress={() => {
-                        setSplitType(type);
-                        setPercentageSplits({});
-                        setCustomAmountSplits({});
+                        if (selectedMemberIds.includes(member.id)) {
+                          setSelectedMemberIds(
+                            selectedMemberIds.filter(id => id !== member.id),
+                          );
+                          // Remove from splits
+                          const newPercentageSplits = { ...percentageSplits };
+                          delete newPercentageSplits[member.id];
+                          setPercentageSplits(newPercentageSplits);
+                          const newCustomAmountSplits = {
+                            ...customAmountSplits,
+                          };
+                          delete newCustomAmountSplits[member.id];
+                          setCustomAmountSplits(newCustomAmountSplits);
+                        } else {
+                          setSelectedMemberIds([
+                            ...selectedMemberIds,
+                            member.id,
+                          ]);
+                          // Initialize with default values
+                          if (splitType === 'percentage') {
+                            const totalSelected = selectedMemberIds.length + 1;
+                            const perMember = 100 / totalSelected;
+                            // Redistribute percentages
+                            const newPercentageSplits: Record<string, number> =
+                              {};
+                            [...selectedMemberIds, member.id].forEach(id => {
+                              newPercentageSplits[id] = perMember;
+                            });
+                            setPercentageSplits(newPercentageSplits);
+                          } else if (splitType === 'custom') {
+                            const totalAmount = parseFloat(amount) || 0;
+                            const totalSelected = selectedMemberIds.length + 1;
+                            const perMember = totalAmount / totalSelected;
+                            // Redistribute amounts
+                            const newCustomAmountSplits: Record<
+                              string,
+                              number
+                            > = {};
+                            [...selectedMemberIds, member.id].forEach(id => {
+                              newCustomAmountSplits[id] = perMember;
+                            });
+                            setCustomAmountSplits(newCustomAmountSplits);
+                          }
+                        }
                       }}
+                      activeOpacity={0.7}
                     >
-                      <Text
-                        style={[
-                          styles.splitTypeButtonText,
-                          {
-                            color:
-                              splitType === type
-                                ? '#ffffff'
-                                : colors.textSecondary,
-                          },
-                        ]}
-                      >
-                        {type === 'equal'
-                          ? 'Equal'
-                          : type === 'percentage'
-                          ? 'Percentage'
-                          : 'Custom'}
-                      </Text>
-                    </TouchableOpacity>
-                  ),
-                )}
-              </View>
-            </View>
-
-            <View style={styles.membersContainer}>
-              <Text style={[styles.membersLabel, { color: colors.text }]}>
-                Select Members
-              </Text>
-              {groupMembers.map(member => {
-                const isSelected = selectedMemberIds.includes(member.id);
-                return (
-                  <TouchableOpacity
-                    key={member.id}
-                    style={[
-                      styles.memberItem,
-                      {
-                        backgroundColor: isSelected
-                          ? colors.primary + '15'
-                          : colors.inputBackground,
-                        borderColor: isSelected
-                          ? colors.primary
-                          : colors.border,
-                      },
-                    ]}
-                    onPress={() => toggleMemberSelection(member.id)}
-                  >
-                    <View style={styles.memberInfo}>
                       <Icon
-                        name={isSelected ? 'checkbox' : 'square-outline'}
+                        name={
+                          selectedMemberIds.includes(member.id)
+                            ? 'checkbox'
+                            : 'square-outline'
+                        }
                         size={24}
-                        color={isSelected ? colors.primary : colors.textSecondary}
+                        color={
+                          selectedMemberIds.includes(member.id)
+                            ? colors.primary
+                            : colors.textSecondary
+                        }
                       />
-                      <Text
-                        style={[
-                          styles.memberName,
-                          {
-                            color: isSelected
-                              ? colors.primary
-                              : colors.text,
-                          },
-                        ]}
-                      >
+                      <Text style={[styles.memberName, { color: colors.text }]}>
                         {member.name}
                       </Text>
+                    </TouchableOpacity>
+                    {selectedMemberIds.includes(member.id) &&
+                      splitType === 'percentage' && (
+                        <Input
+                          value={percentageSplits[member.id]?.toFixed(2) || '0'}
+                          onChangeText={text => {
+                            const value = parseFloat(text) || 0;
+                            setPercentageSplits({
+                              ...percentageSplits,
+                              [member.id]: Math.max(0, Math.min(100, value)), // Clamp between 0-100
+                            });
+                          }}
+                          placeholder="0"
+                          keyboardType="decimal-pad"
+                          style={styles.percentageInput}
+                          rightIcon={
+                            <Text
+                              style={{
+                                color: colors.textSecondary,
+                              }}
+                            >
+                              %
+                            </Text>
+                          }
+                        />
+                      )}
+                    {selectedMemberIds.includes(member.id) &&
+                      splitType === 'custom' && (
+                        <Input
+                          value={
+                            customAmountSplits[member.id]?.toFixed(2) || '0.00'
+                          }
+                          onChangeText={text => {
+                            const value = parseFloat(text) || 0;
+                            setCustomAmountSplits({
+                              ...customAmountSplits,
+                              [member.id]: Math.max(0, value), // No negative amounts
+                            });
+                          }}
+                          placeholder="0.00"
+                          keyboardType="decimal-pad"
+                          style={styles.amountInput}
+                          rightIcon={
+                            <Text
+                              style={{
+                                color: colors.textSecondary,
+                              }}
+                            >
+                              {currencyCode}
+                            </Text>
+                          }
+                        />
+                      )}
+                  </View>
+                ))}
+                {splitType === 'percentage' && selectedMemberIds.length > 0 && (
+                  <View style={styles.totalContainer}>
+                    <Text
+                      style={[
+                        styles.totalLabel,
+                        {
+                          color:
+                            Math.abs(
+                              selectedMemberIds.reduce(
+                                (sum, id) => sum + (percentageSplits[id] || 0),
+                                0,
+                              ) - 100,
+                            ) < 0.01
+                              ? colors.success || colors.primary
+                              : colors.error,
+                        },
+                      ]}
+                    >
+                      Total:{' '}
+                      {selectedMemberIds
+                        .reduce(
+                          (sum, id) => sum + (percentageSplits[id] || 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                      %
+                      {Math.abs(
+                        selectedMemberIds.reduce(
+                          (sum, id) => sum + (percentageSplits[id] || 0),
+                          0,
+                        ) - 100,
+                      ) > 0.01 && ' (Must equal 100%)'}
+                    </Text>
+                  </View>
+                )}
+                {splitType === 'custom' &&
+                  selectedMemberIds.length > 0 &&
+                  amount && (
+                    <View style={styles.totalContainer}>
+                      <Text
+                        style={[
+                          styles.totalLabel,
+                          {
+                            color:
+                              Math.abs(
+                                selectedMemberIds.reduce(
+                                  (sum, id) =>
+                                    sum + (customAmountSplits[id] || 0),
+                                  0,
+                                ) - parseFloat(amount),
+                              ) < 0.01
+                                ? colors.success || colors.primary
+                                : colors.error,
+                          },
+                        ]}
+                      >
+                        Total:{' '}
+                        {selectedMemberIds
+                          .reduce(
+                            (sum, id) => sum + (customAmountSplits[id] || 0),
+                            0,
+                          )
+                          .toFixed(2)}{' '}
+                        {currencyCode}
+                        {Math.abs(
+                          selectedMemberIds.reduce(
+                            (sum, id) => sum + (customAmountSplits[id] || 0),
+                            0,
+                          ) - parseFloat(amount),
+                        ) > 0.01 &&
+                          ` (Must equal ${parseFloat(amount).toFixed(
+                            2,
+                          )} ${currencyCode})`}
+                      </Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              })}
-              {errors.members && (
-                <Text style={[styles.errorText, { color: colors.error }]}>
-                  {errors.members}
-                </Text>
-              )}
-            </View>
-
-            {splitType === 'percentage' && (
-              <View style={styles.splitsContainer}>
-                <Text
-                  style={[styles.splitsLabel, { color: colors.textSecondary }]}
-                >
-                  Enter percentages (must total 100%)
-                </Text>
-                {groupMembers
-                  .filter(m => selectedMemberIds.includes(m.id))
-                  .map(member => (
-                    <Input
-                      key={member.id}
-                      label={member.name}
-                      value={
-                        percentageSplits[member.id]?.toFixed(2) || '0'
-                      }
-                      onChangeText={text => {
-                        const value = parseFloat(text) || 0;
-                        setPercentageSplits({
-                          ...percentageSplits,
-                          [member.id]: Math.max(0, Math.min(100, value)),
-                        });
-                      }}
-                      keyboardType="decimal-pad"
-                      rightIcon={
-                        <Text style={{ color: colors.textSecondary }}>%</Text>
-                      }
-                    />
-                  ))}
-                {errors.split && (
-                  <Text style={[styles.errorText, { color: colors.error }]}>
-                    {errors.split}
-                  </Text>
-                )}
+                  )}
               </View>
-            )}
+            </>
+          )}
 
-            {splitType === 'custom' && (
-              <View style={styles.splitsContainer}>
-                <Text
-                  style={[styles.splitsLabel, { color: colors.textSecondary }]}
-                >
-                  Enter amounts (must total{' '}
-                  {parseFloat(amount).toFixed(2) || '0.00'})
-                </Text>
-                {groupMembers
-                  .filter(m => selectedMemberIds.includes(m.id))
-                  .map(member => (
-                    <Input
-                      key={member.id}
-                      label={member.name}
-                      value={
-                        customAmountSplits[member.id]?.toFixed(2) || '0.00'
-                      }
-                      onChangeText={text => {
-                        const value = parseFloat(text) || 0;
-                        setCustomAmountSplits({
-                          ...customAmountSplits,
-                          [member.id]: Math.max(0, value),
-                        });
-                      }}
-                      keyboardType="decimal-pad"
-                      rightIcon={
-                        <Text style={{ color: colors.textSecondary }}>
-                          {currencyCode}
-                        </Text>
-                      }
-                    />
-                  ))}
-                {errors.split && (
-                  <Text style={[styles.errorText, { color: colors.error }]}>
-                    {errors.split}
-                  </Text>
-                )}
-              </View>
-            )}
-          </Card>
-        )}
-
-        {errors.submit && (
-          <Card variant="outlined" style={styles.errorCard}>
-            <View style={styles.errorContainer}>
+          {errors.submit && (
+            <View
+              style={[
+                styles.errorContainer,
+                { backgroundColor: colors.error + '15' },
+              ]}
+            >
               <Icon name="alert-circle" size={20} color={colors.error} />
               <Text style={[styles.errorText, { color: colors.error }]}>
                 {errors.submit}
               </Text>
             </View>
-          </Card>
-        )}
+          )}
 
-        <Button
-          title={isPersonalExpense ? 'Add Expense' : 'Add Group Expense'}
-          onPress={handleSubmit}
-          loading={loading}
-          style={styles.submitButton}
-          size="large"
-          leftIcon={
-            <Icon
-              name={isPersonalExpense ? 'add-circle-outline' : 'people-outline'}
-              size={20}
-              color="#ffffff"
-            />
-          }
-        />
+          <Button
+            title="Add Expense"
+            onPress={handleSubmit}
+            loading={loading}
+            style={styles.submitButton}
+            size="large"
+            leftIcon={
+              <Icon name="checkmark-circle" size={20} color="#ffffff" />
+            }
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -677,162 +630,76 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingTop: 12,
-    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  typeCard: {
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 16,
-    letterSpacing: 0.2,
-  },
-  typeToggleContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  typeToggle: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  typeToggleActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  typeToggleInactive: {
-    borderWidth: 1.5,
-    backgroundColor: 'transparent',
-  },
-  typeToggleText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  groupSelector: {
-    marginTop: 8,
-  },
-  detailsCard: {
-    marginBottom: 16,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  amountInput: {
-    flex: 2,
-  },
-  currencyInput: {
-    flex: 1,
-  },
-  groupCard: {
-    marginBottom: 16,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  splitTypeContainer: {
-    marginBottom: 20,
-  },
-  splitTypeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    letterSpacing: 0.2,
-  },
-  splitTypeButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  splitTypeButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  splitTypeButtonActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  splitTypeButtonInactive: {
-    borderWidth: 1.5,
-    backgroundColor: 'transparent',
-  },
-  splitTypeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  membersContainer: {
-    marginBottom: 20,
-  },
-  membersLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    letterSpacing: 0.2,
-  },
-  memberItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1.5,
-  },
-  memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  splitsContainer: {
-    marginTop: 8,
-  },
-  splitsLabel: {
-    fontSize: 13,
-    marginBottom: 12,
-    fontWeight: '500',
+  formSection: {
+    paddingHorizontal: 20,
   },
   submitButton: {
     marginTop: 8,
     marginBottom: 20,
   },
-  errorCard: {
-    marginBottom: 16,
-    borderColor: undefined, // Will be set inline
-  },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
     gap: 12,
   },
   errorText: {
     fontSize: 14,
     flex: 1,
     fontWeight: '500',
-    lineHeight: 20,
+  },
+  memberSelectionContainer: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  memberSelectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    letterSpacing: 0.2,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  memberCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  percentageInput: {
+    fontSize: 14,
+    width: 100,
+    marginLeft: 12,
+  },
+  amountInput: {
+    width: 120,
+    marginLeft: 12,
+    fontSize: 14,
+  },
+  totalContainer: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'right',
   },
 });
